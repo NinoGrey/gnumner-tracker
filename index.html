@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мониторинг Госзакупок Армении (gnumner.minfin.am)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <style>
+    body { padding: 20px; background-color: #0f172a; color: #f1f5f9; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 15px; }
+    .search-box { margin-bottom: 15px; }
+    .search-box input { width: 100%; font-size: 1.1em; padding: 12px; }
+    table a { color: #38bdf8; text-decoration: none; font-weight: bold; }
+    table a:hover { text-decoration: underline; }
+    .stats { color: #94a3b8; font-size: 0.9em; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h2>🏛️ Мониторинг Госзакупок Армении</h2>
+      <p><small>База всех объявлений с gnumner.minfin.am</small></p>
+    </header>
+
+    <!-- Единая строка поиска -->
+    <div class="search-box">
+      <input type="search" id="searchInput" placeholder="Введите название тендера, ключевое слово или номер (например: հագուստ, կտոր, пошив)..." onkeyup="filterTable()">
+    </div>
+
+    <div class="stats" id="statsCounter">Загрузка данных...</div>
+
+    <figure>
+      <table role="grid">
+        <thead>
+          <tr>
+            <th style="width: 15%;">Дата добавления</th>
+            <th>Наименование тендера / процедуры</th>
+            <th style="width: 15%;">Документы</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="3">Загрузка базы данных...</td></tr>
+        </tbody>
+      </table>
+    </figure>
+  </div>
+
+  <script>
+    let allTenders = [];
+
+    async function loadData() {
+      try {
+        const res = await fetch('data.json?v=' + new Date().getTime());
+        allTenders = await res.json();
+        renderTable(allTenders);
+      } catch (err) {
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="3">База данных пока пуста. Запустите парсер.</td></tr>';
+      }
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('tableBody');
+      document.getElementById('statsCounter').innerText = `Найдено тендеров: ${data.length} (из ${allTenders.length} всего)`;
+
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3">Ничего не найдено по вашему запросу.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(item => `
+        <tr>
+          <td><small>${item.date}</small></td>
+          <td>${item.title}</td>
+          <td><a href="${item.url}" target="_blank" rel="noopener">Открыть 🔗</a></td>
+        </tr>
+      `).join('');
+    }
+
+    function filterTable() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      
+      if (!query) {
+        renderTable(allTenders);
+        return;
+      }
+
+      const filtered = allTenders.filter(item => 
+        item.title.toLowerCase().includes(query)
+      );
+
+      renderTable(filtered);
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
