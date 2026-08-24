@@ -19,6 +19,34 @@ SECTIONS = [
     {
         "name": "Открытый конкурс (Բաց մրցույթ)",
         "url": f"{BASE_URL}/hy/page/bac_mrcuyti_haytararutyun_ev_hraver"
+    },
+    {
+        "name": "Запрос котировок (Գնանշման հարցում)",
+        "url": f"{BASE_URL}/hy/page/gnanshman_harcman_haytararutyun_ev_hraver"
+    },
+    {
+        "name": "Двухэтапный конкурс — Предквалификация (Երկփուլ մրցույթի նախաորակավորում)",
+        "url": f"{BASE_URL}/hy/page/erkpul_mrcuyti_nakhaorakavorman_haytararutyun"
+    },
+    {
+        "name": "Открытый конкурс — Предквалификация (Բաց մրցույթի նախաորակավորում)",
+        "url": f"{BASE_URL}/hy/page/bac_mrcuyti_nakhaorakavorman_haytararutyun"
+    },
+    {
+        "name": "Запрос котировок — Предквалификация (Գնանշման հարցման նախաորակավորում)",
+        "url": f"{BASE_URL}/hy/page/gnanshman_harcman_nakhaorakavorman_haytararutyun"
+    },
+    {
+        "name": "Закрытый целевой конкурс — Предквалификация (Փակ նպատակային մրցույթի նախաորակավորում)",
+        "url": f"{BASE_URL}/hy/page/_pak_npatakayin_mrcuyti_nakhaorakavorman_haytararutyun"
+    },
+    {
+        "name": "Закрытый периодический конкурс — Предквалификация (Փակ պարբերական մրցույթի նախաորակավորում)",
+        "url": f"{BASE_URL}/hy/page/pak_parberakan_mrcuyti_nakhaorakavorman_haytararutyun_ev_hraver"
+    },
+    {
+        "name": "Закрытый периодический конкурс — Договоры (Փակ պարբերական մրցույթի սկզբնական պայմանագրեր)",
+        "url": f"{BASE_URL}/hy/page/pak_parberakan_mrcuyti_ardyunqum_knqvats_skzbnakan_paymanagrer"
     }
 ]
 
