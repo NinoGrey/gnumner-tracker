@@ -14,6 +14,24 @@
     table a { color: #38bdf8; text-decoration: none; font-weight: bold; }
     table a:hover { text-decoration: underline; }
     .stats { color: #94a3b8; font-size: 0.9em; margin-bottom: 15px; }
+    
+    /* Стили для бейджа категории */
+    .badge-category {
+      display: inline-block;
+      background-color: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #0284c7;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75em;
+      font-weight: 600;
+      margin-right: 8px;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .tender-title-cell {
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -25,7 +43,7 @@
 
     <!-- Единая строка поиска -->
     <div class="search-box">
-      <input type="search" id="searchInput" placeholder="Введите название тендера, ключевое слово или номер (например: հագուստ, կտոր, пошив)..." onkeyup="filterTable()">
+      <input type="search" id="searchInput" placeholder="Введите название тендера, категорию или номер (например: հագուստ, կտոր, Аукцион)..." onkeyup="filterTable()">
     </div>
 
     <div class="stats" id="statsCounter">Загрузка данных...</div>
@@ -68,13 +86,19 @@
         return;
       }
 
-      tbody.innerHTML = data.map(item => `
-        <tr>
-          <td><small>${item.date}</small></td>
-          <td>${item.title}</td>
-          <td><a href="${item.url}" target="_blank" rel="noopener">Открыть 🔗</a></td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = data.map(item => {
+        const categoryBadge = item.category 
+          ? `<span class="badge-category">${item.category}</span>`
+          : '';
+
+        return `
+          <tr>
+            <td><small>${item.date}</small></td>
+            <td class="tender-title-cell">${categoryBadge}${item.title}</td>
+            <td><a href="${item.url}" target="_blank" rel="noopener">Открыть 🔗</a></td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function filterTable() {
@@ -85,9 +109,11 @@
         return;
       }
 
-      const filtered = allTenders.filter(item => 
-        item.title.toLowerCase().includes(query)
-      );
+      const filtered = allTenders.filter(item => {
+        const titleMatch = item.title && item.title.toLowerCase().includes(query);
+        const categoryMatch = item.category && item.category.toLowerCase().includes(query);
+        return titleMatch || categoryMatch;
+      });
 
       renderTable(filtered);
     }
