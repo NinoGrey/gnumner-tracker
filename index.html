@@ -4,157 +4,308 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Мониторинг Госзакупок Армении (gnumner.minfin.am)</title>
+  
+  <!-- Подключение шрифта Inter и стилей Pico -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  
   <style>
-    body { padding: 20px; background-color: #0f172a; color: #f1f5f9; }
-    .container { max-width: 1400px; margin: 0 auto; }
+    :root {
+      --bg-main: #090d16;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --accent-color: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+
+    body { 
+      padding: 30px 15px; 
+      background-color: var(--bg-main); 
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
     
+    .container { max-width: 1440px; margin: 0 auto; }
+    
+    /* Шапка сайта */
     header { 
-      margin-bottom: 20px; 
-      border-bottom: 1px solid #334155; 
-      padding-bottom: 15px; 
+      margin-bottom: 24px; 
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 20px 24px; 
+      border-radius: 16px;
       display: flex; 
       justify-content: space-between; 
       align-items: center; 
       flex-wrap: wrap; 
-      gap: 15px; 
+      gap: 16px; 
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     }
-    header h2 { margin-bottom: 0; }
     
-    .search-box { margin-bottom: 15px; }
-    .search-box input { width: 100%; font-size: 1.1em; padding: 12px; }
+    .header-title { display: flex; align-items: center; gap: 12px; }
+    .header-title h2 { margin: 0; font-weight: 700; font-size: 1.5em; letter-spacing: -0.02em; }
+    .header-subtitle { margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.88em; }
     
-    table a { color: #38bdf8; text-decoration: none; font-weight: bold; }
-    table a:hover { text-decoration: underline; }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      background-color: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #10b981;
+      display: inline-block;
+    }
+
+    /* Кнопка обновления */
+    .btn-update {
+      width: auto;
+      margin: 0;
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border: 1px solid #38bdf8;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-weight: 600;
+      font-size: 0.9em;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    }
+    .btn-update:hover { 
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(56, 189, 248, 0.4); 
+    }
+    .btn-update:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Аккордеон логов */
+    details.log-accordion {
+      background-color: #030712;
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      margin-bottom: 24px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    }
+    details.log-accordion summary {
+      padding: 12px 18px;
+      font-size: 0.85em;
+      color: var(--accent-color);
+      cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      user-select: none;
+      background-color: #0b0f19;
+      border-bottom: 1px solid transparent;
+      transition: background 0.2s;
+    }
+    details.log-accordion[open] summary {
+      border-bottom-color: var(--card-border);
+    }
+    details.log-accordion summary:hover {
+      background-color: #111827;
+    }
+    .terminal-box {
+      margin: 0;
+      padding: 14px 18px;
+      background-color: #030712;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8em;
+      line-height: 1.6;
+      max-height: 220px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .terminal-box::-webkit-scrollbar { width: 6px; }
+    .terminal-box::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 3px; }
+
+    /* Поиск и статистика */
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .search-wrapper { position: relative; width: 100%; }
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      pointer-events: none;
+    }
+    .search-box input {
+      width: 100%;
+      font-size: 0.95em;
+      padding: 14px 16px 14px 44px;
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: #fff;
+      margin-bottom: 0;
+      transition: all 0.2s;
+    }
+    .search-box input:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .stats { 
+      color: var(--text-muted); 
+      font-size: 0.88em; 
+      font-weight: 500; 
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Карточка таблицы */
+    .table-container {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+    table { margin-bottom: 0; width: 100%; border-collapse: collapse; }
     
+    th {
+      background-color: #0d1322;
+      color: #94a3b8;
+      font-size: 0.82em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
     th.sortable {
       cursor: pointer;
       user-select: none;
-      transition: background-color 0.2s;
+      transition: color 0.2s, background-color 0.2s;
     }
     th.sortable:hover {
-      background-color: #1e293b;
-      color: #38bdf8;
+      background-color: #151d30;
+      color: var(--accent-color);
     }
     .sort-icon {
-      font-size: 0.8em;
-      margin-left: 4px;
-      color: #64748b;
+      font-size: 0.9em;
+      margin-left: 6px;
+      color: #475569;
     }
-    .sort-active {
-      color: #38bdf8;
-    }
+    .sort-active { color: var(--accent-color); font-weight: bold; }
 
-    .stats { color: #94a3b8; font-size: 0.9em; margin-bottom: 15px; }
-    
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid #1a2333;
+      vertical-align: middle;
+      font-size: 0.92em;
+    }
+    tbody tr { transition: background-color 0.15s; }
+    tbody tr:hover { background-color: rgba(30, 41, 59, 0.5); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    /* Бейджи */
     .badge-category {
       display: inline-block;
-      background-color: #1e293b;
+      background-color: rgba(56, 189, 248, 0.1);
       color: #38bdf8;
-      border: 1px solid #0284c7;
-      padding: 3px 8px;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 2px 8px;
       border-radius: 6px;
-      font-size: 0.75em;
+      font-size: 0.78em;
       font-weight: 600;
       margin-right: 8px;
-      white-space: nowrap;
-      vertical-align: middle;
+      font-family: 'JetBrains Mono', monospace;
     }
 
     .badge-section {
       display: inline-block;
-      background-color: #0f172a;
+      background-color: rgba(148, 163, 184, 0.08);
       color: #cbd5e1;
-      border: 1px solid #475569;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.8em;
-    }
-    
-    .tender-title-cell { line-height: 1.5; }
-    
-    .btn-update {
-      width: auto;
-      margin-bottom: 0;
-      background-color: #0284c7;
-      border-color: #0284c7;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .btn-update:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    details.log-accordion {
-      background-color: #020617;
-      border: 1px solid #1e293b;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 4px 10px;
       border-radius: 8px;
-      margin-bottom: 20px;
-      overflow: hidden;
+      font-size: 0.8em;
+      font-weight: 500;
+      white-space: nowrap;
     }
-    details.log-accordion summary {
-      padding: 10px 15px;
-      font-size: 0.85em;
-      color: #38bdf8;
-      cursor: pointer;
-      font-family: monospace;
-      user-select: none;
-      background-color: #0f172a;
+
+    .link-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.88em;
+      padding: 6px 12px;
+      background-color: rgba(56, 189, 248, 0.08);
+      border-radius: 8px;
+      transition: all 0.2s;
     }
-    details.log-accordion summary:hover {
-      background-color: #1e293b;
+    .link-btn:hover {
+      background-color: rgba(56, 189, 248, 0.2);
+      color: #fff;
+      text-decoration: none;
     }
-    .terminal-box {
-      margin: 0;
-      padding: 12px 15px;
-      background-color: #020617;
-      color: #38bdf8;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 0.82em;
-      line-height: 1.4;
-      max-height: 220px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      border-top: 1px solid #1e293b;
+
+    .date-cell {
+      font-family: 'JetBrains Mono', monospace;
+      color: #cbd5e1;
+      font-size: 0.88em;
     }
+    
+    .tender-title-cell { line-height: 1.5; color: #f1f5f9; font-weight: 500; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <div>
-        <h2>🏛️ Мониторинг Госзакупок Армении</h2>
-        <p><small>База объявлений с gnumner.minfin.am</small></p>
+        <div class="header-title">
+          <span class="status-dot"></span>
+          <h2>Мониторинг Госзакупок Армении</h2>
+        </div>
+        <p class="header-subtitle">Автоматизированная система парсинга портала gnumner.minfin.am</p>
       </div>
       <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">🔄 Обновить базу</button>
     </header>
 
     <details class="log-accordion" open>
-      <summary>📟 Лог сканирования сайта <span id="logTime">(загрузка...)</span></summary>
+      <summary>📟 Лог сканирования системы <span id="logTime">(загрузка...)</span></summary>
       <pre class="terminal-box" id="terminalLogs">Загрузка логов последнего сканирования...</pre>
     </details>
 
-    <div class="search-box">
-      <input type="search" id="searchInput" placeholder="Введите название, тип процедуры, код [категорию] или дату..." onkeyup="filterTable()">
+    <div class="toolbar">
+      <div class="search-box">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="search" id="searchInput" placeholder="Поиск по названию, процедуре, коду категории [XXXX] или дате..." onkeyup="filterTable()">
+        </div>
+      </div>
+      <div class="stats" id="statsCounter">Загрузка данных...</div>
     </div>
 
-    <div class="stats" id="statsCounter">Загрузка данных...</div>
-
-    <figure>
+    <div class="table-container">
       <table role="grid">
         <thead>
           <tr>
             <th class="sortable" onclick="handleSort('num')" style="width: 5%;">№ <span id="sort-num" class="sort-icon">↕</span></th>
-            <th class="sortable" style="width: 18%;" onclick="handleSort('section')">Тип процедуры <span id="sort-section" class="sort-icon">↕</span></th>
+            <th class="sortable" style="width: 20%;" onclick="handleSort('section')">Тип процедуры <span id="sort-section" class="sort-icon">↕</span></th>
             <th class="sortable" style="width: 12%;" onclick="handleSort('date')">Публикация <span id="sort-date" class="sort-icon">↕</span></th>
             <th class="sortable" style="width: 12%;" onclick="handleSort('end_date')">Завершение <span id="sort-end_date" class="sort-icon">↕</span></th>
             <th class="sortable" onclick="handleSort('title')">Наименование тендера <span id="sort-title" class="sort-icon">↕</span></th>
-            <th style="width: 10%;">Ссылка</th>
+            <th style="width: 10%; text-align: center;">Ссылка</th>
           </tr>
         </thead>
         <tbody id="tableBody">
-          <tr><td colspan="6">Загрузка базы данных...</td></tr>
+          <tr><td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">Загрузка базы данных...</td></tr>
         </tbody>
       </table>
-    </figure>
+    </div>
   </div>
 
   <script>
@@ -182,7 +333,7 @@
 
         filterTable();
       } catch (err) {
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="6">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #ef4444;">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
         document.getElementById('statsCounter').innerText = 'Найдено тендеров: 0';
       }
 
@@ -256,10 +407,10 @@
 
     function renderTable(data) {
       const tbody = document.getElementById('tableBody');
-      document.getElementById('statsCounter').innerText = `Отображено тендеров: ${data.length} (из ${allTenders.length} всего)`;
+      document.getElementById('statsCounter').innerHTML = `📊 Отображено тендеров: <strong>${data.length}</strong> (из ${allTenders.length} в базе)`;
 
       if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6">Ничего не найдено по вашему запросу.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">Ничего не найдено по вашему запросу.</td></tr>';
         return;
       }
 
@@ -277,12 +428,12 @@
 
         return `
           <tr>
-            <td><strong>${item.num}</strong></td>
+            <td><strong style="color: #64748b;">${item.num}</strong></td>
             <td>${sectionBadge}</td>
-            <td><small>${pubDate}</small></td>
-            <td><small>${endDate}</small></td>
+            <td class="date-cell">${pubDate}</td>
+            <td class="date-cell">${endDate}</td>
             <td class="tender-title-cell">${categoryBadge}${item.title}</td>
-            <td><a href="${item.url}" target="_blank" rel="noopener">Открыть 🔗</a></td>
+            <td style="text-align: center;"><a href="${item.url}" class="link-btn" target="_blank" rel="noopener">Открыть 🔗</a></td>
           </tr>
         `;
       }).join('');
