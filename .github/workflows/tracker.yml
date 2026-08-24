@@ -32,10 +32,10 @@ jobs:
       - name: Сбор всех тендеров
         run: python main.py
 
-      - name: Сохранение обновленной базы
+      - name: Сохранение обновленной базы и логов
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add data.json || true
-          git commit -m "Update all tenders list" || exit 0
+          git add data.json log.json || true
+          git commit -m "Update tenders list and logs" || exit 0
           git push
