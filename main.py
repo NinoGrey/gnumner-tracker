@@ -1,5 +1,6 @@
 import json
 import re
+import time
 import urllib3
 from datetime import datetime
 import requests
@@ -14,12 +15,22 @@ HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    )
+    ),
+    "Accept-Language": "hy,en-US;q=0.9,en;q=0.8,ru;q=0.7",
 }
 
-# Отсечка по дате публикации
 CUTOFF_DATE = datetime.strptime("2026-08-01", "%Y-%m-%d")
 MAX_PAGES = 50
+DELAY_BETWEEN_PAGES = 2.0
+
+# Глобальный список для накопления лога
+execution_logs = []
+
+
+def log_msg(msg: str):
+    """Печатает лог в консоль и сохраняет его для сайта."""
+    print(msg)
+    execution_logs.append(msg)
 
 
 def clean_text(text: str) -> str:
@@ -29,10 +40,8 @@ def clean_text(text: str) -> str:
 
 
 def extract_dates(block) -> tuple[datetime | None, str, str]:
-    """Извлекает все даты (DD.MM.YYYY или DD/MM/YYYY) из блока тендера."""
     text = block.get_text()
     dates = re.findall(r'\b(\d{2}[\./]\d{2}[\./]\d{4})\b', text)
-    
     dates = [d.replace('/', '.') for d in dates]
 
     pub_dt = None
@@ -52,32 +61,41 @@ def extract_dates(block) -> tuple[datetime | None, str, str]:
     return pub_dt, pub_str, end_str
 
 
+def fetch_with_retries(session: requests.Session, url: str, retries: int = 3) -> requests.Response | None:
+    for attempt in range(1, retries + 1):
+        try:
+            response = session.get(url, headers=HEADERS, timeout=20, verify=False)
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            response.encoding = 'utf-8'
+            return response
+        except Exception as e:
+            log_msg(f"⚠️ [Попытка {attempt}/{retries}] Сбой сетевого запроса: {e}")
+            if attempt < retries:
+                time.sleep(3 * attempt)
+    return None
+
+
 def parse_tenders():
     tenders = []
     page = 1
     stop_parsing = False
+    session = requests.Session()
+
+    log_msg(f"🚀 Старт парсинга. Отсечка по дате: {CUTOFF_DATE.strftime('%d.%m.%Y')}")
 
     while not stop_parsing and page <= MAX_PAGES:
-        # Формирование ссылок /1, /2, /3...
         url = START_URL if page == 1 else f"{START_URL}/{page}"
-        print(f"\n📡 [Страница {page}] Загрузка: {url}")
+        log_msg(f"📡 [Страница {page}] Загрузка: {url}")
 
-        try:
-            response = requests.get(url, headers=HEADERS, timeout=15, verify=False)
-            
-            if response.status_code == 404:
-                print(f"🏁 Страница {page} не найдена (404). Конец списка.")
-                break
-
-            response.raise_for_status()
-            response.encoding = 'utf-8'
-        except Exception as e:
-            print(f"❌ Ошибка сетевого запроса: {e}")
+        response = fetch_with_retries(session, url)
+        if not response:
+            log_msg(f"🏁 Не удалось получить страницу {page} или конец списка (404).")
             break
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Поиск тендеров по возможным контейнерам сайта
         tender_blocks = soup.find_all('div', class_='tender')
         if not tender_blocks:
             tender_blocks = soup.find_all('tr', class_=re.compile(r'(even|odd)'))
@@ -85,7 +103,7 @@ def parse_tenders():
             tender_blocks = soup.find_all('div', class_='views-row')
 
         if not tender_blocks:
-            print("🏁 Блоки тендеров не найдены. Конец списка.")
+            log_msg("🏁 Блоки тендеров не найдены. Завершение.")
             break
 
         added_on_page = 0
@@ -104,14 +122,12 @@ def parse_tenders():
 
             pub_date_dt, pub_date_str, end_date_str = extract_dates(block)
 
-            # Проверка отсечки по дате
             if pub_date_dt and pub_date_dt < CUTOFF_DATE:
-                print(f"⏹ ОСТАНОВКА: Найдена дата {pub_date_str} (раньше {CUTOFF_DATE.strftime('%d.%m.%Y')}).")
-                print(f"   └ Тендер: \"{title[:60]}...\"")
+                log_msg(f"⏹ ОСТАНОВКА: Найдена дата {pub_date_str} (раньше отсечки).")
+                log_msg(f"   └ Тендер: \"{title[:60]}...\"")
                 stop_parsing = True
                 break
 
-            # Извлечение категории/кода из скобок [ ... ]
             category = ""
             cat_match = re.search(r'\[(.*?)\]', title)
             if cat_match:
@@ -130,26 +146,39 @@ def parse_tenders():
                 tenders.append(tender_data)
                 added_on_page += 1
 
-        print(f"   ├ Добавлено с этой страницы: {added_on_page}")
-        print(f"   └ Накоплено всего: {len(tenders)}")
+        log_msg(f"   ├ Добавлено со страницы: {added_on_page}")
+        log_msg(f"   └ Накоплено всего: {len(tenders)}")
 
         if stop_parsing or added_on_page == 0:
             break
 
         page += 1
+        time.sleep(DELAY_BETWEEN_PAGES)
 
-    print(f"\n✅ Успешно собрано {len(tenders)} тендеров с {page} страниц.")
-    return tenders
+    log_msg(f"✅ Финиш: собрано {len(tenders)} тендеров с {page} страниц.")
+    return tenders, page
 
 
 def main():
     try:
-        tenders = parse_tenders()
+        tenders, total_pages = parse_tenders()
+
         with open('data.json', 'w', encoding='utf-8') as f:
             json.dump(tenders, f, ensure_ascii=False, indent=2)
-        print("💾 Файл data.json обновлен.")
+
+        # Сохранение лога в отдельный файл
+        log_payload = {
+            "timestamp": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
+            "total_tenders": len(tenders),
+            "total_pages": total_pages,
+            "logs": execution_logs
+        }
+        with open('log.json', 'w', encoding='utf-8') as f:
+            json.dump(log_payload, f, ensure_ascii=False, indent=2)
+
+        print("💾 Файлы data.json и log.json успешно обновлены.")
     except Exception as e:
-        print(f"❌ Ошибка в main: {e}")
+        log_msg(f"❌ Критическая ошибка в main: {e}")
         exit(1)
 
 
