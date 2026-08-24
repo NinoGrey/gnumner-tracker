@@ -10,7 +10,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://gnumner.minfin.am"
 
-# Список разделов для парсинга
+# Список всех нужных разделов сайта
 SECTIONS = [
     {
         "name": "Электронный аукцион (Էլեկտրոնային աճուրդ)",
@@ -30,6 +30,7 @@ HEADERS = {
     "Accept-Language": "hy,en-US;q=0.9,en;q=0.8,ru;q=0.7",
 }
 
+# Отсечка: сканировать только тендеры начиная с 1 августа 2026 года
 CUTOFF_DATE = datetime.strptime("2026-08-01", "%Y-%m-%d")
 MAX_PAGES_PER_SECTION = 50
 DELAY_BETWEEN_PAGES = 2.0
@@ -49,23 +50,30 @@ def clean_text(text: str) -> str:
 
 
 def extract_dates(block) -> tuple[datetime | None, str, str]:
-    text = block.get_text()
-    dates = re.findall(r'\b(\d{2}[\./]\d{2}[\./]\d{4})\b', text)
-    dates = [d.replace('/', '.') for d in dates]
+    """Извлекает даты из параграфа <p class="tender_time"> (формат YYYY-MM-DD HH:MM:SS)."""
+    time_elem = block.find('p', class_='tender_time')
+    text = time_elem.get_text() if time_elem else block.get_text()
+
+    # Поиск дат формата YYYY-MM-DD
+    raw_dates = re.findall(r'\b(\d{4}-\d{2}-\d{2})\b', text)
 
     pub_dt = None
     pub_str = "—"
     end_str = "—"
 
-    if len(dates) >= 1:
-        pub_str = dates[0]
+    if len(raw_dates) >= 1:
         try:
-            pub_dt = datetime.strptime(pub_str, "%d.%m.%Y")
+            pub_dt = datetime.strptime(raw_dates[0], "%Y-%m-%d")
+            pub_str = pub_dt.strftime("%d.%m.%Y")
         except ValueError:
             pub_dt = None
 
-    if len(dates) >= 2:
-        end_str = dates[1]
+    if len(raw_dates) >= 2:
+        try:
+            end_dt = datetime.strptime(raw_dates[1], "%Y-%m-%d")
+            end_str = end_dt.strftime("%d.%m.%Y")
+        except ValueError:
+            end_str = raw_dates[1]
 
     return pub_dt, pub_str, end_str
 
@@ -89,9 +97,9 @@ def fetch_with_retries(session: requests.Session, url: str, retries: int = 3) ->
 def parse_section(session: requests.Session, section: dict, existing_urls: set, tenders_list: list):
     section_name = section["name"]
     start_url = section["url"]
-    
+
     log_msg(f"\n📂 === Парсинг раздела: {section_name} ===")
-    
+
     page = 1
     stop_parsing = False
     added_in_section = 0
@@ -102,16 +110,15 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
 
         response = fetch_with_retries(session, url)
         if not response:
-            log_msg(f"🏁 Не удалось получить страницу {page} (404 или ошибка сетевого доступа). Переход к следующему разделу.")
+            log_msg(f"🏁 Не удалось получить страницу {page} (404 или ошибка сети). Переход дальше.")
             break
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
+        # Точный поиск контейнеров <div class="tender">
         tender_blocks = soup.find_all('div', class_='tender')
         if not tender_blocks:
             tender_blocks = soup.find_all('tr', class_=re.compile(r'(even|odd)'))
-        if not tender_blocks:
-            tender_blocks = soup.find_all('div', class_='views-row')
 
         if not tender_blocks:
             log_msg("🏁 Блоки тендеров не найдены. Конец текущего раздела.")
@@ -133,9 +140,9 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
 
             pub_date_dt, pub_date_str, end_date_str = extract_dates(block)
 
-            # Отсечка по дате публикации для ТЕКУЩЕГО раздела
+            # Проверка отсечки по дате
             if pub_date_dt and pub_date_dt < CUTOFF_DATE:
-                log_msg(f"⏹ ОСТАНОВКА РАЗДЕЛА: Найдена дата {pub_date_str} (раньше отсечки).")
+                log_msg(f"⏹ ОСТАНОВКА РАЗДЕЛА: Найдена дата {pub_date_str} (раньше {CUTOFF_DATE.strftime('%d.%m.%Y')}).")
                 log_msg(f"   └ Тендер: \"{title[:60]}...\"")
                 stop_parsing = True
                 break
@@ -146,7 +153,6 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
                 category = cat_match.group(1).strip()
                 title = title.replace(f"[{category}]", "").strip()
 
-            # Дедупликация по URL
             if full_url not in existing_urls:
                 existing_urls.add(full_url)
                 tenders_list.append({
@@ -177,7 +183,7 @@ def main():
         tenders = []
         existing_urls = set()
 
-        log_msg(f"🚀 Старт парсинга всех разделов. Отсечка по дате: {CUTOFF_DATE.strftime('%d.%m.%Y')}")
+        log_msg(f"🚀 Старт парсинга. Отсечка по дате публикации: {CUTOFF_DATE.strftime('%d.%m.%Y')}")
 
         for section in SECTIONS:
             parse_section(session, section, existing_urls, tenders)
