@@ -6,9 +6,8 @@ from bs4 import BeautifulSoup
 
 # Укажите здесь все 9 интересующих вас страниц
 TARGET_URLS = [
-    "https://gnumner.minfin.am/hy/page/elektronayin_achurdi_haytararutyun_ev_hraver/",
-    "https://gnumner.minfin.am/hy/page/bac_mrcuyti_haytararutyun_ev_hraver/",
-    "https://gnumner.minfin.am/hy/page/gnanshman_harcman_haytararutyun_ev_hraver/",
+    "https://https://gnumner.minfin.am/hy/page/elektronayin_achurdi_haytararutyun_ev_hraver/",
+   
     # Добавьте остальные 6 URL...
 ]
 
