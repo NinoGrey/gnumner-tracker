@@ -5,6 +5,10 @@ on:
     - cron: '*/30 4-15 * * 1-5'
   workflow_dispatch:
 
+# Явное разрешение боту записывать изменения в репозиторий
+permissions:
+  contents: write
+
 jobs:
   run-tracker:
     runs-on: ubuntu-latest
