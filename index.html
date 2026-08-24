@@ -1,413 +1,350 @@
 <!DOCTYPE html>
 <html lang="ru" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Мониторинг тендеров</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <style>
-    :root {
-      --bg-main: #0f172a;
-      --card-bg: #1e293b;
-      --card-border: #334155;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --accent-color: #38bdf8;
-      --accent-hover: #0284c7;
-    }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мониторинг тендеров</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    :root {
+      --bg-main: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-color: #38bdf8;
+      --accent-hover: #0284c7;
+    }
 
-    [data-theme="light"] {
-      --bg-main: #f8fafc;
-      --card-bg: #ffffff;
-      --card-border: #e2e8f0;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --accent-color: #0284c7;
-      --accent-hover: #0369a1;
-    }
+    [data-theme="light"] {
+      --bg-main: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent-color: #0284c7;
+      --accent-hover: #0369a1;
+    }
 
-    body {
-      background-color: var(--bg-main);
-      color: var(--text-main);
-      font-family: system-ui, -apple-system, sans-serif;
-      padding-top: 20px;
-      transition: background-color 0.3s ease, color 0.3s ease;
-    }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, sans-serif;
+      padding-top: 20px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
 
-    .header-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      gap: 16px;
-    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
 
-    .header-title {
-      margin: 0;
-      font-size: 1.75rem;
-      font-weight: 700;
-    }
+    .header-title {
+      margin: 0;
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
 
-    .header-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-    .btn-icon {
-      all: unset;
-      box-sizing: border-box;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      color: var(--text-muted);
-      border-radius: 10px;
-      width: 42px;
-      height: 42px;
-      min-width: 42px;
-      min-height: 42px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      padding: 0 !important;
-      margin: 0 !important;
-    }
+    /* Сброс агрессивных стилей Pico CSS для кнопки переключения темы */
+    .btn-icon {
+      all: unset;
+      box-sizing: border-box;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 10px;
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
 
-    .btn-icon:hover {
-      border-color: var(--accent-color);
-      color: var(--accent-color);
-      transform: translateY(-1px);
-    }
+    .btn-icon:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      transform: translateY(-1px);
+    }
 
-    .btn-icon svg {
-      width: 20px;
-      height: 20px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      pointer-events: none;
-    }
+    .btn-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
 
-    .toolbar {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 16px 20px;
-      margin-bottom: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
-    }
+    /* Монолитная панель управления (Toolbar) */
+    .toolbar {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+    }
 
-    .filters-row {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      flex-wrap: wrap;
-      width: 100%;
-    }
+    .filters-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      width: 100%;
+    }
 
-    .search-box {
-      flex: 1 1 320px;
-      margin-bottom: 0;
-    }
+    .search-box {
+      flex: 1 1 320px;
+      margin-bottom: 0;
+    }
 
-    .search-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
 
-    .search-icon-svg {
-      position: absolute;
-      left: 14px;
-      width: 18px;
-      height: 18px;
-      stroke: var(--text-muted);
-      fill: none;
-      stroke-width: 2;
-      pointer-events: none;
-    }
+    .search-icon-svg {
+      position: absolute;
+      left: 14px;
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-muted);
+      fill: none;
+      stroke-width: 2;
+      pointer-events: none;
+    }
 
-    .search-wrapper input[type="search"] {
-      padding-left: 42px;
-      margin-bottom: 0;
-      background-color: var(--bg-main);
-      border-color: var(--card-border);
-      color: var(--text-main);
-      border-radius: 10px;
-      height: 44px;
-    }
+    .search-wrapper input[type="search"] {
+      padding-left: 42px;
+      margin-bottom: 0;
+      background-color: var(--bg-main);
+      border-color: var(--card-border);
+      color: var(--text-main);
+      border-radius: 10px;
+      height: 44px;
+    }
 
-    .date-filter-group {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      background-color: var(--bg-main);
-      border: 1px solid var(--card-border);
-      padding: 4px 12px;
-      border-radius: 10px;
-      height: 44px;
-    }
+    .date-filter-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background-color: var(--bg-main);
+      border: 1px solid var(--card-border);
+      padding: 4px 12px;
+      border-radius: 10px;
+      height: 44px;
+    }
 
-    .date-field {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
+    .date-field {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
 
-    .date-field label {
-      font-size: 0.8em;
-      color: var(--text-muted);
-      margin-bottom: 0;
-      font-weight: 600;
-      white-space: nowrap;
-    }
+    .date-field label {
+      font-size: 0.8em;
+      color: var(--text-muted);
+      margin-bottom: 0;
+      font-weight: 600;
+      white-space: nowrap;
+    }
 
-    .date-field input[type="date"] {
-      margin-bottom: 0;
-      padding: 4px 8px;
-      font-size: 0.85em;
-      border: none;
-      background: transparent;
-      color: var(--text-main);
-      height: auto;
-    }
+    .date-field input[type="date"] {
+      margin-bottom: 0;
+      padding: 4px 8px;
+      font-size: 0.85em;
+      border: none;
+      background: transparent;
+      color: var(--text-main);
+      height: auto;
+    }
 
-    .btn-reset-dates {
-      margin-bottom: 0;
-      padding: 4px 10px;
-      font-size: 0.8em;
-      height: 28px;
-      line-height: 1;
-      background-color: transparent;
-      border: 1px solid var(--card-border);
-      color: var(--text-muted);
-      border-radius: 6px;
-      cursor: pointer;
-    }
+    .btn-reset-dates {
+      margin-bottom: 0;
+      padding: 4px 10px;
+      font-size: 0.8em;
+      height: 28px;
+      line-height: 1;
+      background-color: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+    }
 
-    .btn-reset-dates:hover {
-      background-color: var(--card-bg);
-      color: var(--text-main);
-    }
+    .btn-reset-dates:hover {
+      background-color: var(--card-bg);
+      color: var(--text-main);
+    }
 
-    .stats {
-      color: var(--text-muted);
-      font-size: 0.85em;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding-top: 10px;
-      border-top: 1px dashed var(--card-border);
-    }
+    .stats {
+      color: var(--text-muted);
+      font-size: 0.85em;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--card-border);
+    }
 
-    .table-container {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      overflow: hidden;
-    }
+    /* Таблица */
+    .table-container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
 
-    table {
-      margin-bottom: 0;
-      table-layout: fixed;
-      width: 100%;
-    }
+    table {
+      margin-bottom: 0;
+    }
 
-    th {
-      background-color: var(--bg-main);
-      color: var(--text-muted);
-      font-weight: 600;
-      border-bottom: 1px solid var(--card-border);
-    }
+    th {
+      background-color: var(--bg-main);
+      color: var(--text-muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--card-border);
+    }
 
-    td {
-      border-bottom: 1px solid var(--card-border);
-      color: var(--text-main);
-      word-break: break-word;
-    }
+    td {
+      border-bottom: 1px solid var(--card-border);
+      color: var(--text-main);
+    }
 
-    tr:last-child td {
-      border-bottom: none;
-    }
-  </style>
+    tr:last-child td {
+      border-bottom: none;
+    }
+  </style>
 </head>
 <body>
-  <main class="container">
-    
-    <header class="header-bar">
-      <h1 class="header-title">Мониторинг тендеров</h1>
-      <div class="header-controls">
-        <button id="themeToggle" class="btn-icon" title="Переключить тему" onclick="toggleTheme()">
-          <svg id="themeIcon" viewBox="0 0 24 24">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
-        <button class="contrast" style="margin-bottom:0; height: 42px; display: inline-flex; align-items: center;" onclick="location.reload()">Обновить базу</button>
-      </div>
-    </header>
+  <main class="container">
+    
+    <!-- Шапка -->
+    <header class="header-bar">
+      <h1 class="header-title">Мониторинг тендеров</h1>
+      <div class="header-controls">
+        <button id="themeToggle" class="btn-icon" title="Переключить тему" onclick="toggleTheme()">
+          <svg id="themeIcon" viewBox="0 0 24 24">
+            <!-- Иконка луны по умолчанию для темной темы -->
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <button class="contrast" style="margin-bottom:0; height: 42px; display: inline-flex; align-items: center;" onclick="location.reload()">Обновить базу</button>
+      </div>
+    </header>
 
-    <div class="toolbar">
-      <div class="filters-row">
-        <div class="search-box">
-          <div class="search-wrapper">
-            <svg class="search-icon-svg" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="search" id="searchInput" placeholder="Поиск по названию, процедуре, коду..." oninput="filterTable()">
-          </div>
-        </div>
+    <!-- Объединенный Toolbar -->
+    <div class="toolbar">
+      <div class="filters-row">
+        <!-- Поиск -->
+        <div class="search-box">
+          <div class="search-wrapper">
+            <svg class="search-icon-svg" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="search" id="searchInput" placeholder="Поиск по названию, процедуре, коду..." oninput="filterTable()">
+          </div>
+        </div>
 
-        <div class="date-filter-group">
-          <div class="date-field">
-            <label for="dateFrom">С:</label>
-            <input type="date" id="dateFrom" onchange="filterTable()">
-          </div>
-          <div class="date-field">
-            <label for="dateTo">ПО:</label>
-            <input type="date" id="dateTo" onchange="filterTable()">
-          </div>
-          <button class="btn-reset-dates" onclick="resetFilters()">Сбросить</button>
-        </div>
-      </div>
+        <!-- Фильтр по датам -->
+        <div class="date-filter-group">
+          <div class="date-field">
+            <label for="dateFrom">С:</label>
+            <input type="date" id="dateFrom" onchange="filterTable()">
+          </div>
+          <div class="date-field">
+            <label for="dateTo">ПО:</label>
+            <input type="date" id="dateTo" onchange="filterTable()">
+          </div>
+          <button class="btn-reset-dates" onclick="resetFilters()">Сбросить</button>
+        </div>
+      </div>
 
-      <div class="stats" id="statsCounter">Загрузка данных...</div>
-    </div>
+      <!-- Счетчик тендеров -->
+      <div class="stats" id="statsCounter">Отображено тендеров: 0</div>
+    </div>
 
-    <div class="table-container">
-      <table role="grid">
-        <thead>
-          <tr>
-            <th style="width: 18%;">Код / Процедура</th>
-            <th style="width: 35%;">Наименование</th>
-            <th style="width: 25%;">Заказчик</th>
-            <th style="width: 12%;">Окончание</th>
-            <th style="width: 10%;">Ссылка</th>
-          </tr>
-        </thead>
-        <tbody id="tendersBody">
-        </tbody>
-      </table>
-    </div>
+    <!-- Таблица -->
+    <div class="table-container">
+      <table role="grid">
+        <thead>
+          <tr>
+            <th>Код / Процедура</th>
+            <th>Наименование</th>
+            <th>Заказчик</th>
+            <th>Дата окончания</th>
+            <th>Ссылка</th>
+          </tr>
+        </thead>
+        <tbody id="tendersBody">
+          <!-- Данные загружаются через JS -->
+        </tbody>
+      </table>
+    </div>
 
-  </main>
+  </main>
 
-  <script>
-    let allTenders = [];
+  <script>
+    // Переключение темы (Dark/Light)
+    function toggleTheme() {
+      const html = document.documentElement;
+      const themeIcon = document.getElementById('themeIcon');
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      
+      // Смена SVG-иконки
+      if (newTheme === 'light') {
+        themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+      } else {
+        themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+      }
+    }
 
-    function toggleTheme() {
-      const html = document.documentElement;
-      const themeIcon = document.getElementById('themeIcon');
-      const currentTheme = html.getAttribute('data-theme');
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      
-      html.setAttribute('data-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
-      
-      if (newTheme === 'light') {
-        themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
-      } else {
-        themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
-      }
-    }
+    // Восстановление темы из локального хранилища
+    (function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      if (savedTheme === 'light') {
+        toggleTheme();
+      }
+    })();
 
-    (function initTheme() {
-      const savedTheme = localStorage.getItem('theme') || 'dark';
-      if (savedTheme === 'light') {
-        toggleTheme();
-      }
-    })();
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('dateFrom').value = '';
+      document.getElementById('dateTo').value = '';
+      filterTable();
+    }
 
-    async function loadData() {
-      try {
-        const response = await fetch('data.json');
-        allTenders = await response.json();
-        filterTable();
-      } catch (err) {
-        document.getElementById('statsCounter').innerText = 'Ошибка загрузки data.json';
-        console.error(err);
-      }
-    }
-
-    function parseDate(dateStr) {
-      if (!dateStr) return null;
-      const parts = dateStr.split('.');
-      if (parts.length === 3) {
-        return new Date(parts[2], parts[1] - 1, parts[0]);
-      }
-      return new Date(dateStr);
-    }
-
-    function filterTable() {
-      const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
-      const dateFromVal = document.getElementById('dateFrom').value;
-      const dateToVal = document.getElementById('dateTo').value;
-
-      const dateFrom = dateFromVal ? new Date(dateFromVal) : null;
-      const dateTo = dateToVal ? new Date(dateToVal) : null;
-
-      if (dateTo) dateTo.setHours(23, 59, 59, 999);
-
-      const filtered = allTenders.filter(item => {
-        const textMatch = !searchVal || 
-          (item.code && item.code.toLowerCase().includes(searchVal)) ||
-          (item.title && item.title.toLowerCase().includes(searchVal)) ||
-          (item.customer && item.customer.toLowerCase().includes(searchVal)) ||
-          (item.type && item.type.toLowerCase().includes(searchVal));
-
-        const tenderDate = parseDate(item.end_date);
-        let dateMatch = true;
-
-        if (tenderDate && !isNaN(tenderDate.getTime())) {
-          if (dateFrom && tenderDate < dateFrom) dateMatch = false;
-          if (dateTo && tenderDate > dateTo) dateMatch = false;
-        }
-
-        return textMatch && dateMatch;
-      });
-
-      renderTable(filtered);
-    }
-
-    function renderTable(data) {
-      const tbody = document.getElementById('tendersBody');
-      tbody.innerHTML = '';
-
-      document.getElementById('statsCounter').innerText = `Отображено тендеров: ${data.length} из ${allTenders.length}`;
-
-      if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 24px;">Записи не найдены</td></tr>';
-        return;
-      }
-
-      data.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${item.code || '-'}</strong><br><small style="color:var(--text-muted);">${item.type || ''}</small></td>
-          <td>${item.title || '-'}</td>
-          <td>${item.customer || '-'}</td>
-          <td>${item.end_date || '-'}</td>
-          <td>${item.link ? `<a href="${item.link}" target="_blank" rel="noopener">Открыть</a>` : '-'}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function resetFilters() {
-      document.getElementById('searchInput').value = '';
-      document.getElementById('dateFrom').value = '';
-      document.getElementById('dateTo').value = '';
-      filterTable();
-    }
-
-    document.addEventListener('DOMContentLoaded', loadData);
-  </script>
+    function filterTable() {
+      // Здесь подключается твой существующий JS-код фильтрации таблицы
+    }
+  </script>
 </body>
 </html>
+а этот код можно вставить вместо того?
