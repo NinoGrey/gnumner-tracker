@@ -80,18 +80,32 @@ def extract_dates(block) -> tuple[datetime | None, str, str]:
     time_elem = block.find('p', class_='tender_time')
     text = time_elem.get_text() if time_elem else block.get_text()
 
+    # Ищем все даты (YYYY-MM-DD) и время (ЧЧ:ММ:СС или ЧЧ:ММ)
     raw_dates = re.findall(r'\b(\d{4}-\d{2}-\d{2})\b', text)
+    raw_times = re.findall(r'\b(\d{2}:\d{2}(?::\d{2})?)\b', text)
 
     pub_dt = None
     pub_str = "—"
     end_str = "—"
 
     if len(raw_dates) >= 1:
+        pub_date_str = raw_dates[0]
+        pub_time_str = raw_times[0] if raw_times else "00:00:00"
+        
+        # Если на сайте время указано без секунд (ЧЧ:ММ), добавляем их
+        if len(pub_time_str) == 5:
+            pub_time_str += ":00"
+
+        full_pub_str = f"{pub_date_str} {pub_time_str}"
         try:
-            pub_dt = datetime.strptime(raw_dates[0], "%Y-%m-%d")
-            pub_str = pub_dt.strftime("%d.%m.%Y")
+            pub_dt = datetime.strptime(full_pub_str, "%Y-%m-%d %H:%M:%S")
+            pub_str = pub_dt.strftime("%d.%m.%Y %H:%M:%S")
         except ValueError:
-            pub_dt = None
+            try:
+                pub_dt = datetime.strptime(pub_date_str, "%Y-%m-%d")
+                pub_str = pub_dt.strftime("%d.%m.%Y")
+            except ValueError:
+                pub_dt = None
 
     if len(raw_dates) >= 2:
         try:
@@ -221,11 +235,15 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
 
 
 def parse_date_for_sort(item):
-    """Преобразует строку даты DD.MM.YYYY в объект datetime для сортировки."""
+    """Преобразует строку даты (DD.MM.YYYY HH:MM:SS или DD.MM.YYYY) в объект datetime для сортировки."""
+    date_str = item["date"]
     try:
-        return datetime.strptime(item["date"], "%d.%m.%Y")
-    except Exception:
-        return datetime.min
+        return datetime.strptime(date_str, "%d.%m.%Y %H:%M:%S")
+    except ValueError:
+        try:
+            return datetime.strptime(date_str, "%d.%m.%Y")
+        except Exception:
+            return datetime.min
 
 
 def main():
