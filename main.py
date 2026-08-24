@@ -1,182 +1,101 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Мониторинг Госзакупок Армении (gnumner.minfin.am)</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
-  <style>
-    body { padding: 20px; background-color: #0f172a; color: #f1f5f9; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    header { margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
-    header h2 { margin-bottom: 0; }
-    .search-box { margin-bottom: 15px; }
-    .search-box input { width: 100%; font-size: 1.1em; padding: 12px; }
-    table a { color: #38bdf8; text-decoration: none; font-weight: bold; }
-    table a:hover { text-decoration: underline; }
-    .stats { color: #94a3b8; font-size: 0.9em; margin-bottom: 15px; }
+import json
+import re
+import requests
+from bs4 import BeautifulSoup
+
+BASE_URL = "https://gnumner.minfin.am"
+TARGET_URL = f"{BASE_URL}/hy/page/haytararutyunner_tsanowtsowmner/"
+
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+}
+
+def clean_text(text: str) -> str:
+    """Очищает текст от лишних пробелов, переносов строк и символов."""
+    if not text:
+        return ""
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+def extract_category(title: str) -> tuple[str, str]:
+    """
+    Извлекает префикс/категорию из заголовка (например, [Аукцион], [Գնանշում] и т.д.)
+    Возвращает кортеж: (Категория, Очищенный заголовок).
+    """
+    match = re.match(r'^\s*\[(.*?)\]\s*(.*)$', title)
+    if match:
+        category = match.group(1).strip()
+        clean_title = match.group(2).strip()
+        return category, clean_title
+    return "", title
+
+def parse_tenders():
+    print(f"📡 Загрузка страницы: {TARGET_URL}")
+    response = requests.get(TARGET_URL, headers=HEADERS, timeout=15)
+    response.raise_for_status()
     
-    .badge-category {
-      display: inline-block;
-      background-color: #1e293b;
-      color: #38bdf8;
-      border: 1px solid #0284c7;
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 0.75em;
-      font-weight: 600;
-      margin-right: 8px;
-      white-space: nowrap;
-      vertical-align: middle;
-    }
-    .tender-title-cell { line-height: 1.5; }
+    # Указываем правильную кодировку для корректного отображения армянских символов
+    response.encoding = 'utf-8'
     
-    .btn-update {
-      width: auto;
-      margin-bottom: 0;
-      background-color: #0284c7;
-      border-color: #0284c7;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .btn-update:disabled { opacity: 0.6; cursor: not-allowed; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <header>
-      <div>
-        <h2>🏛️ Мониторинг Госзакупок Армении</h2>
-        <p><small>База всех объявлений с gnumner.minfin.am</small></p>
-      </div>
-      <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">🔄 Обновить базу</button>
-    </header>
+    soup = BeautifulSoup(response.text, 'html.parser')
+    tenders = []
+    
+    # Ищем все ссылки на объявления в таблицах или списках
+    links = soup.find_all('a', href=True)
+    
+    for a in links:
+        href = a['href']
+        text = clean_text(a.get_text())
+        
+        # Фильтруем ссылки, относящиеся к объявлениям (содержат /hy/news/ или /hy/page/)
+        if '/hy/news/item/' in href or '/hy/page/' in href:
+            if not text or len(text) < 5:
+                continue
+            
+            # Формируем полную ссылку
+            full_url = href if href.startswith('http') else f"{BASE_URL}{href}"
+            
+            # Попытка найти дату рядом с элементом
+            parent_row = a.find_parent(['tr', 'li', 'div'])
+            date_text = ""
+            if parent_row:
+                # Ищем шаблон даты ДД.ММ.ГГГГ
+                date_match = re.search(r'\b\d{2}\.\d{2}\.\d{4}\b', parent_row.get_text())
+                if date_match:
+                    date_text = date_match.group(0)
+            
+            # Выделяем категорию из заголовка
+            category, clean_title = extract_category(text)
+            
+            # Исключаем дубликаты
+            tender_data = {
+                "title": clean_title,
+                "category": category,
+                "date": date_text,
+                "url": full_url
+            }
+            
+            if tender_data not in tenders:
+                tenders.append(tender_data)
+                
+    print(f"✅ Найдено объявлений: {len(tenders)}")
+    return tenders
 
-    <div class="search-box">
-      <input type="search" id="searchInput" placeholder="Введите название тендера, категорию или номер..." onkeyup="filterTable()">
-    </div>
+def main():
+    try:
+        tenders = parse_tenders()
+        
+        # Сохраняем в data.json с красивым форматированием
+        with open('data.json', 'w', encoding='utf-8') as f:
+            json.dump(tenders, f, ensure_ascii=False, indent=2)
+            
+        print("💾 Данные успешно сохранены в data.json")
+    except Exception as e:
+        print(f"❌ Ошибка при выполнении парсера: {e}")
+        exit(1)
 
-    <div class="stats" id="statsCounter">Загрузка данных...</div>
-
-    <figure>
-      <table role="grid">
-        <thead>
-          <tr>
-            <th style="width: 15%;">Дата добавления</th>
-            <th>Наименование тендера / процедуры</th>
-            <th style="width: 15%;">Документы</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <tr><td colspan="3">Загрузка базы данных...</td></tr>
-        </tbody>
-      </table>
-    </figure>
-  </div>
-
-  <script>
-    const GH_USER = 'NinoGrey';
-    const GH_REPO = 'gnumner-tracker';
-    const WORKFLOW_ID = 'tracker.yml';
-
-    let allTenders = [];
-
-    async function loadData() {
-      try {
-        const res = await fetch('data.json?v=' + new Date().getTime());
-        allTenders = await res.json();
-        renderTable(allTenders);
-      } catch (err) {
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="3">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
-      }
-    }
-
-    function renderTable(data) {
-      const tbody = document.getElementById('tableBody');
-      document.getElementById('statsCounter').innerText = `Найдено тендеров: ${data.length} (из ${allTenders.length} всего)`;
-
-      if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3">Ничего не найдено по вашему запросу.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = data.map(item => {
-        const categoryBadge = item.category 
-          ? `<span class="badge-category">${item.category}</span>`
-          : '';
-
-        return `
-          <tr>
-            <td><small>${item.date}</small></td>
-            <td class="tender-title-cell">${categoryBadge}${item.title}</td>
-            <td><a href="${item.url}" target="_blank" rel="noopener">Открыть 🔗</a></td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    function filterTable() {
-      const query = document.getElementById('searchInput').value.toLowerCase().trim();
-      if (!query) {
-        renderTable(allTenders);
-        return;
-      }
-      const filtered = allTenders.filter(item => {
-        const titleMatch = item.title && item.title.toLowerCase().includes(query);
-        const categoryMatch = item.category && item.category.toLowerCase().includes(query);
-        return titleMatch || categoryMatch;
-      });
-      renderTable(filtered);
-    }
-
-    async function triggerWorkflow() {
-      const btn = document.getElementById('updateBtn');
-      
-      // 1. Проверяем токен в памяти браузера или запрашиваем через input (prompt)
-      let token = localStorage.getItem('gh_token');
-      if (!token) {
-        token = prompt('Введите ваш GitHub Personal Access Token (начинается на ghp_):');
-        if (!token) return; // Если нажали Отмена
-        localStorage.setItem('gh_token', token.trim());
-      }
-
-      btn.disabled = true;
-      btn.innerText = '⏳ Запуск парсера...';
-
-      try {
-        const response = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/${WORKFLOW_ID}/dispatches`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/vnd.github+json',
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ ref: 'main' })
-        });
-
-        if (response.ok) {
-          btn.innerText = '⚙️ Сканирование сайта...';
-          // Ждём 25 секунд завершения GitHub Action и обновляем данные в таблице
-          setTimeout(() => {
-            btn.innerText = '🔄 Обновить базу';
-            btn.disabled = false;
-            loadData();
-          }, 25000);
-        } else {
-          // Если токен оказался неверным — сбрасываем его из сохранённых
-          localStorage.removeItem('gh_token');
-          alert('Ошибка доступа! Проверьте правильность токена и попробуйте снова.');
-          btn.innerText = '🔄 Обновить базу';
-          btn.disabled = false;
-        }
-      } catch (err) {
-        alert('Сбой сети при подключении к GitHub API.');
-        btn.innerText = '🔄 Обновить базу';
-        btn.disabled = false;
-      }
-    }
-
-    loadData();
-  </script>
-</body>
-</html>
+if __name__ == "__main__":
+    main()
