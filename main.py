@@ -2,6 +2,7 @@ import json
 import re
 import requests
 import urllib3
+from bs4 import BeautifulSoup
 
 # Отключаем предупреждения о необрабатываемых SSL-сертификатах
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -20,71 +21,63 @@ def clean_text(text: str) -> str:
     """Очищает текст от лишних пробелов, переносов строк и символов."""
     if not text:
         return ""
-    text = re.sub(r'\s+', ' ', text)
-    return text.strip()
-
-def extract_category(title: str) -> tuple[str, str]:
-    """
-    Извлекает префикс/категорию из заголовка (например, [Аукцион], [Գնանշում] и т.д.)
-    Возвращает кортеж: (Категория, Очищенный заголовок).
-    """
-    match = re.match(r'^\s*\[(.*?)\]\s*(.*)$', title)
-    if match:
-        category = match.group(1).strip()
-        clean_title = match.group(2).strip()
-        return category, clean_title
-    return "", title
+    return re.sub(r'\s+', ' ', text).strip()
 
 def parse_tenders():
     print(f"📡 Загрузка страницы: {TARGET_URL}")
     
-    # Добавлен параметр verify=False для обхода ошибки SSL
     response = requests.get(TARGET_URL, headers=HEADERS, timeout=15, verify=False)
     response.raise_for_status()
-    
-    # Указываем правильную кодировку для корректного отображения армянских символов
     response.encoding = 'utf-8'
     
     soup = BeautifulSoup(response.text, 'html.parser')
     tenders = []
     
-    # Ищем все ссылки на объявления
-    links = soup.find_all('a', href=True)
+    # Ищем строки таблицы (tr), где содержатся конкретные объявления
+    rows = soup.find_all('tr')
     
-    for a in links:
-        href = a['href']
-        text = clean_text(a.get_text())
+    for row in rows:
+        # Ищем ссылку внутри строки
+        link_elem = row.find('a', href=True)
+        if not link_elem:
+            continue
+            
+        href = link_elem['href']
+        title = clean_text(link_elem.get_text())
         
-        # Фильтруем ссылки, относящиеся к объявлениям
-        if '/hy/news/item/' in href or '/hy/page/' in href:
-            if not text or len(text) < 5:
-                continue
+        # Пропускаем служебные ссылки и пустые элементы
+        if not title or len(title) < 5 or 'javascript' in href:
+            continue
             
-            # Формируем полную ссылку
-            full_url = href if href.startswith('http') else f"{BASE_URL}{href}"
+        # Корректно формируем URL без потери слэша
+        if href.startswith('http'):
+            full_url = href
+        else:
+            full_url = f"{BASE_URL}/{href.lstrip('/')}"
             
-            # Попытка найти дату рядом с элементом
-            parent_row = a.find_parent(['tr', 'li', 'div'])
-            date_text = ""
-            if parent_row:
-                date_match = re.search(r'\b\d{2}\.\d{2}\.\d{4}\b', parent_row.get_text())
-                if date_match:
-                    date_text = date_match.group(0)
-            
-            # Выделяем категорию из заголовка
-            category, clean_title = extract_category(text)
-            
-            tender_data = {
-                "title": clean_title,
-                "category": category,
-                "date": date_text,
-                "url": full_url
-            }
-            
-            if tender_data not in tenders:
-                tenders.append(tender_data)
+        # Извлекаем дату из текста всей строки таблицы (формат ДД.ММ.ГГГГ)
+        row_text = clean_text(row.get_text())
+        date_match = re.search(r'\b\d{2}\.\d{2}\.\d{4}\b', row_text)
+        date_text = date_match.group(0) if date_match else ""
+        
+        # Выделяем код тендера/категорию из скобок (например, [ՀՀ ՖՆ-ԷԱՃԱՊՁԲ-24/1])
+        category = ""
+        cat_match = re.search(r'\[(.*?)\]', title)
+        if cat_match:
+            category = cat_match.group(1)
+            title = title.replace(f"[{category}]", "").strip()
+
+        tender_data = {
+            "title": title,
+            "category": category,
+            "date": date_text,
+            "url": full_url
+        }
+        
+        if tender_data not in tenders:
+            tenders.append(tender_data)
                 
-    print(f"✅ Найдено объявлений: {len(tenders)}")
+    print(f"✅ Найдено тендеров: {len(tenders)}")
     return tenders
 
 def main():
@@ -100,5 +93,4 @@ def main():
         exit(1)
 
 if __name__ == "__main__":
-    from bs4 import BeautifulSoup
     main()
