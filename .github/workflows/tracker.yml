@@ -1,9 +1,9 @@
 name: Gnumner All Tenders Collector
 
 on:
-  schedule:
-    - cron: '*/30 4-15 * * 1-5'
-  workflow_dispatch:
+  workflow_dispatch: # Ручной запуск из вкладки Actions в GitHub
+  repository_dispatch: # Запуск по API при клике на кнопку «Обновить базу»
+    types: [update-database]
 
 # Явное разрешение боту записывать изменения в репозиторий
 permissions:
