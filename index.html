@@ -10,7 +10,7 @@
     .container { max-width: 1200px; margin: 0 auto; }
     
     header { 
-      margin-bottom: 25px; 
+      margin-bottom: 20px; 
       border-bottom: 1px solid #334155; 
       padding-bottom: 15px; 
       display: flex; 
@@ -51,6 +51,40 @@
       cursor: pointer;
     }
     .btn-update:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Оформление терминала логов */
+    details.log-accordion {
+      background-color: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    details.log-accordion summary {
+      padding: 10px 15px;
+      font-size: 0.85em;
+      color: #38bdf8;
+      cursor: pointer;
+      font-family: monospace;
+      user-select: none;
+      background-color: #0f172a;
+    }
+    details.log-accordion summary:hover {
+      background-color: #1e293b;
+    }
+    .terminal-box {
+      margin: 0;
+      padding: 12px 15px;
+      background-color: #020617;
+      color: #38bdf8;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.82em;
+      line-height: 1.4;
+      max-height: 250px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      border-top: 1px solid #1e293b;
+    }
   </style>
 </head>
 <body>
@@ -63,8 +97,14 @@
       <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">🔄 Обновить базу</button>
     </header>
 
+    <!-- Вывод красивого лога сбора -->
+    <details class="log-accordion" open>
+      <summary>📟 Лог сканирования сайта <span id="logTime">(загрузка...)</span></summary>
+      <pre class="terminal-box" id="terminalLogs">Загрузка логов последнего сканирования...</pre>
+    </details>
+
     <div class="search-box">
-      <input type="search" id="searchInput" placeholder="Введите название, категорию, № или дату (например: հագուստ, Аукцион, 105, 24.08)..." onkeyup="filterTable()">
+      <input type="search" id="searchInput" placeholder="Введите название, категорию, № или дату..." onkeyup="filterTable()">
     </div>
 
     <div class="stats" id="statsCounter">Загрузка данных...</div>
@@ -95,13 +135,11 @@
     let allTenders = [];
 
     async function loadData() {
+      // 1. Загрузка данных тендеров
       try {
         const res = await fetch('data.json?v=' + new Date().getTime());
         const rawData = await res.json();
         
-        // Обратная нумерация: самый старый тендер (в конце массива) получает № 1,
-        // самый свежий (в начале массива) — максимальный № N. 
-        // При добавлении новых свежих тендеров номера старых тендеров не смещаются.
         const total = rawData.length;
         allTenders = rawData.map((item, index) => ({
           ...item,
@@ -112,6 +150,22 @@
       } catch (err) {
         document.getElementById('tableBody').innerHTML = '<tr><td colspan="5">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
         document.getElementById('statsCounter').innerText = 'Найдено тендеров: 0';
+      }
+
+      // 2. Загрузка логов
+      loadLogs();
+    }
+
+    async function loadLogs() {
+      try {
+        const res = await fetch('log.json?v=' + new Date().getTime());
+        const logData = await res.json();
+
+        document.getElementById('logTime').innerText = `[Обновлено: ${logData.timestamp || '—'}]`;
+        document.getElementById('terminalLogs').innerText = logData.logs.join('\n');
+      } catch (err) {
+        document.getElementById('logTime').innerText = '';
+        document.getElementById('terminalLogs').innerText = 'Лог последнего сканирования недоступен.';
       }
     }
 
@@ -130,7 +184,7 @@
           : '';
 
         const pubDate = item.date || '—';
-        const endDate = item.end_date || item.deadline || '—';
+        const endDate = item.end_date || '—';
 
         return `
           <tr>
@@ -156,7 +210,7 @@
         const titleMatch = item.title && item.title.toLowerCase().includes(query);
         const categoryMatch = item.category && item.category.toLowerCase().includes(query);
         const dateMatch = item.date && item.date.toLowerCase().includes(query);
-        const endDateMatch = (item.end_date || item.deadline) && (item.end_date || item.deadline).toLowerCase().includes(query);
+        const endDateMatch = item.end_date && item.end_date.toLowerCase().includes(query);
         const numMatch = item.num && item.num.toString() === query;
 
         return titleMatch || categoryMatch || dateMatch || endDateMatch || numMatch;
@@ -177,6 +231,7 @@
 
       btn.disabled = true;
       btn.innerText = '⏳ Запуск парсера...';
+      document.getElementById('terminalLogs').innerText = '🚀 Запуск GitHub Actions workflow...\nОжидание выполнения задачи на сервере...';
 
       try {
         const response = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/${WORKFLOW_ID}/dispatches`, {
@@ -198,7 +253,7 @@
           }, 25000);
         } else {
           localStorage.removeItem('gh_token');
-          alert('Ошибка доступа! Проверьте правильность токена и его права (repo / workflow).');
+          alert('Ошибка доступа! Проверьте токен.');
           btn.innerText = '🔄 Обновить базу';
           btn.disabled = false;
         }
