@@ -17,9 +17,9 @@ HEADERS = {
     )
 }
 
-# Граница отсечки по дате (включительно)
+# Отсечка по дате публикации
 CUTOFF_DATE = datetime.strptime("2026-08-01", "%Y-%m-%d")
-MAX_PAGES = 100
+MAX_PAGES = 50
 
 
 def clean_text(text: str) -> str:
@@ -29,13 +29,12 @@ def clean_text(text: str) -> str:
 
 
 def extract_dates(block) -> tuple[datetime | None, str, str]:
-    """
-    Извлекает все даты (DD.MM.YYYY) из текста блока тендера.
-    Возвращает: (pub_date_datetime, pub_date_str, end_date_str)
-    """
+    """Извлекает все даты (DD.MM.YYYY или DD/MM/YYYY) из блока тендера."""
     text = block.get_text()
-    dates = re.findall(r'\b(\d{2}\.\d{2}\.\d{4})\b', text)
+    dates = re.findall(r'\b(\d{2}[\./]\d{2}[\./]\d{4})\b', text)
     
+    dates = [d.replace('/', '.') for d in dates]
+
     pub_dt = None
     pub_str = "—"
     end_str = "—"
@@ -59,12 +58,17 @@ def parse_tenders():
     stop_parsing = False
 
     while not stop_parsing and page <= MAX_PAGES:
-        # Надежная пагинация через параметр ?page=N
-        url = f"{START_URL}?page={page}" if page > 1 else START_URL
+        # Формирование ссылок /1, /2, /3...
+        url = START_URL if page == 1 else f"{START_URL}/{page}"
         print(f"\n📡 [Страница {page}] Загрузка: {url}")
 
         try:
             response = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+            
+            if response.status_code == 404:
+                print(f"🏁 Страница {page} не найдена (404). Конец списка.")
+                break
+
             response.raise_for_status()
             response.encoding = 'utf-8'
         except Exception as e:
@@ -72,7 +76,13 @@ def parse_tenders():
             break
 
         soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Поиск тендеров по возможным контейнерам сайта
         tender_blocks = soup.find_all('div', class_='tender')
+        if not tender_blocks:
+            tender_blocks = soup.find_all('tr', class_=re.compile(r'(even|odd)'))
+        if not tender_blocks:
+            tender_blocks = soup.find_all('div', class_='views-row')
 
         if not tender_blocks:
             print("🏁 Блоки тендеров не найдены. Конец списка.")
@@ -89,13 +99,12 @@ def parse_tenders():
             full_url = href if href.startswith('http') else f"{BASE_URL}{href}"
             title = clean_text(link_elem.get_text())
 
-            if not title:
+            if not title or len(title) < 3:
                 continue
 
-            # Извлечение даты публикации и даты завершения
             pub_date_dt, pub_date_str, end_date_str = extract_dates(block)
 
-            # Проверка отсечки по дате публикации
+            # Проверка отсечки по дате
             if pub_date_dt and pub_date_dt < CUTOFF_DATE:
                 print(f"⏹ ОСТАНОВКА: Найдена дата {pub_date_str} (раньше {CUTOFF_DATE.strftime('%d.%m.%Y')}).")
                 print(f"   └ Тендер: \"{title[:60]}...\"")
@@ -124,7 +133,7 @@ def parse_tenders():
         print(f"   ├ Добавлено с этой страницы: {added_on_page}")
         print(f"   └ Накоплено всего: {len(tenders)}")
 
-        if stop_parsing:
+        if stop_parsing or added_on_page == 0:
             break
 
         page += 1
