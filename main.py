@@ -1,7 +1,10 @@
 import json
 import re
 import requests
-from bs4 import BeautifulSoup
+import urllib3
+
+# Отключаем предупреждения о необрабатываемых SSL-сертификатах
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://gnumner.minfin.am"
 TARGET_URL = f"{BASE_URL}/hy/page/haytararutyunner_tsanowtsowmner/"
@@ -34,7 +37,9 @@ def extract_category(title: str) -> tuple[str, str]:
 
 def parse_tenders():
     print(f"📡 Загрузка страницы: {TARGET_URL}")
-    response = requests.get(TARGET_URL, headers=HEADERS, timeout=15)
+    
+    # Добавлен параметр verify=False для обхода ошибки SSL
+    response = requests.get(TARGET_URL, headers=HEADERS, timeout=15, verify=False)
     response.raise_for_status()
     
     # Указываем правильную кодировку для корректного отображения армянских символов
@@ -43,14 +48,14 @@ def parse_tenders():
     soup = BeautifulSoup(response.text, 'html.parser')
     tenders = []
     
-    # Ищем все ссылки на объявления в таблицах или списках
+    # Ищем все ссылки на объявления
     links = soup.find_all('a', href=True)
     
     for a in links:
         href = a['href']
         text = clean_text(a.get_text())
         
-        # Фильтруем ссылки, относящиеся к объявлениям (содержат /hy/news/ или /hy/page/)
+        # Фильтруем ссылки, относящиеся к объявлениям
         if '/hy/news/item/' in href or '/hy/page/' in href:
             if not text or len(text) < 5:
                 continue
@@ -62,7 +67,6 @@ def parse_tenders():
             parent_row = a.find_parent(['tr', 'li', 'div'])
             date_text = ""
             if parent_row:
-                # Ищем шаблон даты ДД.ММ.ГГГГ
                 date_match = re.search(r'\b\d{2}\.\d{2}\.\d{4}\b', parent_row.get_text())
                 if date_match:
                     date_text = date_match.group(0)
@@ -70,7 +74,6 @@ def parse_tenders():
             # Выделяем категорию из заголовка
             category, clean_title = extract_category(text)
             
-            # Исключаем дубликаты
             tender_data = {
                 "title": clean_title,
                 "category": category,
@@ -88,7 +91,6 @@ def main():
     try:
         tenders = parse_tenders()
         
-        # Сохраняем в data.json с красивым форматированием
         with open('data.json', 'w', encoding='utf-8') as f:
             json.dump(tenders, f, ensure_ascii=False, indent=2)
             
@@ -98,4 +100,5 @@ def main():
         exit(1)
 
 if __name__ == "__main__":
+    from bs4 import BeautifulSoup
     main()
