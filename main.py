@@ -4,12 +4,14 @@ import datetime
 import requests
 from bs4 import BeautifulSoup
 
-TARGET_URLS = [
-    "https://gnumner.minfin.am/hy/page/elektronayin_achurdi_haytararutyun_ev_hraver/",
-    "https://gnumner.minfin.am/hy/page/bac_mrcuyti_haytararutyun_ev_hraver/",
-    "https://gnumner.minfin.am/hy/page/bac_mrcuyti_nakhaorakavorman_haytararutyun/",
-    # Добавьте остальные URL...
-]
+# Словарь с понятными названиями для ваших 9 категорий
+CATEGORIES = {
+    "https://gnumner.minfin.am/hy/page/elektronayin_achurdi_haytararutyun_ev_hraver/": "Электронный аукцион",
+    "https://gnumner.minfin.am/hy/page/bac_mrcuyti_haytararutyun_ev_hraver/": "Открытый конкурс",
+    "https://gnumner.minfin.am/hy/page/bac_mrcuyti_nakhaorakavorman_haytararutyun/": "Предквалификация",
+    # Добавьте оставшиеся ссылки и их названия по аналогии:
+    # "URL": "Название категории",
+}
 
 DATA_FILE = "data.json"
 
@@ -27,7 +29,6 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def extract_tenders_from_page(url, headers):
-    """Вспомогательная функция для сбора тендеров с одной страницы"""
     try:
         res = requests.get(url, headers=headers, timeout=15)
         if res.status_code != 200:
@@ -56,7 +57,6 @@ def extract_tenders_from_page(url, headers):
 
 def run_tracker():
     tenders = load_data()
-    # Множество всех URL в нашей базе для быстрой проверки
     seen_urls = {item["url"] for item in tenders}
     
     headers = {
@@ -65,32 +65,28 @@ def run_tracker():
     now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     new_tenders_batch = []
 
-    for base_url in TARGET_URLS:
-        # 1. Получаем самый свежий тендер из нашей базы для ТЕКУЩЕЙ категории
+    for base_url, category_name in CATEGORIES.items():
         last_known_url = None
         for item in tenders:
             if item.get("source_page") == base_url:
                 last_known_url = item["url"]
                 break
 
-        # 2. Скачиваем 1-ю страницу с сайта gnumner
         first_page_tenders = extract_tenders_from_page(base_url, headers)
         if not first_page_tenders:
             continue
 
-        # 3. Проверяем: если самый свежий тендер на сайте совпадает с нашей базой — пропускаем
         latest_site_url = first_page_tenders[0]["url"]
         if last_known_url and latest_site_url == last_known_url:
-            print(f"Категория {base_url} актуальна. Новых тендеров нет.")
+            print(f"Категория [{category_name}] актуальна.")
             continue
 
-        print(f"Обнаружены обновления в {base_url}! Начинаем сбор...")
+        print(f"Обнаружены обновления в [{category_name}]! Начинаем сбор...")
 
-        # 4. Если есть новые тендеры, читаем страницы по порядку, пока не встретим знакомый url
         category_new_tenders = []
         stop_parsing = False
 
-        for page_num in range(1, 10): # Максимум 10 страниц назад при крупных обновлениях
+        for page_num in range(1, 10):
             if stop_parsing:
                 break
                 
@@ -101,7 +97,6 @@ def run_tracker():
                 break
 
             for t in page_tenders:
-                # Если дошли до последнего известного тендера — останавливаемся
                 if t["url"] == last_known_url or t["url"] in seen_urls:
                     stop_parsing = True
                     break
@@ -110,14 +105,13 @@ def run_tracker():
                     "title": t["title"],
                     "url": t["url"],
                     "date": now_str,
+                    "category": category_name, # Сохраняем имя категории
                     "source_page": base_url
                 })
                 seen_urls.add(t["url"])
 
-        # Добавляем новые тендеры в общий список
         new_tenders_batch.extend(category_new_tenders)
 
-    # 5. Если собран хоть один новый тендер — вставляем их в начало базы и сохраняем
     if new_tenders_batch:
         tenders = new_tenders_batch + tenders
         save_data(tenders)
