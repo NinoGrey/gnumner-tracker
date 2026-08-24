@@ -327,26 +327,26 @@
     .section-proc-5 { background: rgba(244, 63, 94, 0.12); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
     .section-proc-default { background: rgba(148, 163, 184, 0.1); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.2); }
 
-    .link-btn {
+    /* Компактная кнопка-иконка ссылки */
+    .icon-link-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      width: 36px;
+      height: 36px;
       color: var(--accent-color);
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.85em;
-      padding: 6px 12px;
       background-color: rgba(56, 189, 248, 0.08);
       border: 1px solid rgba(56, 189, 248, 0.2);
-      border-radius: 8px;
+      border-radius: 10px;
       transition: all 0.2s;
-      white-space: nowrap;
-    }
-    .link-btn:hover {
-      background-color: rgba(56, 189, 248, 0.2);
-      color: #fff;
       text-decoration: none;
+      font-size: 1.05em;
+    }
+    .icon-link-btn:hover {
+      background-color: rgba(56, 189, 248, 0.25);
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
     }
 
     .date-cell {
@@ -418,8 +418,8 @@
             <th class="sortable" onclick="handleSort('section')" style="width: 17%;">Тип процедуры <span id="sort-section" class="sort-icon">↕</span></th>
             <th class="sortable" onclick="handleSort('date')" style="width: 13%;">Публикация <span id="sort-date" class="sort-icon">↕</span></th>
             <th class="sortable" onclick="handleSort('end_date')" style="width: 13%;">Завершение <span id="sort-end_date" class="sort-icon">↕</span></th>
-            <th class="sortable" onclick="handleSort('title')" style="width: 43%;">Наименование тендера <span id="sort-title" class="sort-icon">↕</span></th>
-            <th style="width: 9%; text-align: center;">Ссылка</th>
+            <th class="sortable" onclick="handleSort('title')" style="width: 45%;">Наименование тендера <span id="sort-title" class="sort-icon">↕</span></th>
+            <th style="width: 7%; text-align: center;">Ссылка</th>
           </tr>
         </thead>
         <tbody id="tableBody">
@@ -473,7 +473,7 @@
       }
     }
 
-    // Парсер дат с поддержкой времени ("24.08.2026 14:30" / "24.08.2026 14:30:45")
+    // Парсер дат с поддержкой времени ("24.08.2026 14:30")
     function parseDateStr(str) {
       if (!str || str === '—') return new Date(0);
       
@@ -566,7 +566,7 @@
       return 'section-proc-default';
     }
 
-    // Красивое форматирование даты и времени в 2 строки
+    // Форматирование даты и времени в 2 строки
     function formatCellDate(str) {
       if (!str || str === '—') return '—';
       const parts = str.trim().split(' ');
@@ -605,7 +605,7 @@
             <td class="date-cell">${pubDateFormatted}</td>
             <td class="date-cell">${endDateFormatted}</td>
             <td class="tender-title-cell">${categoryBadge}${item.title}</td>
-            <td style="text-align: center;"><a href="${item.url}" class="link-btn" target="_blank" rel="noopener">Открыть 🔗</a></td>
+            <td style="text-align: center;"><a href="${item.url}" class="icon-link-btn" target="_blank" rel="noopener" title="Открыть тендер">🔗</a></td>
           </tr>
         `;
       }).join('');
