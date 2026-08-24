@@ -262,7 +262,7 @@ def main():
 
         # 2. Сбор только fresh-данных
         for section in SECTIONS:
-            parse_section(session, section, existing_urls, new_tenders)
+            parse_section(section, existing_urls, new_tenders, session)
 
         # 3. Объединение свежих тендеров со старыми
         all_tenders = new_tenders + existing_tenders
