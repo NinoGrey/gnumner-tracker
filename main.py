@@ -7,7 +7,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://gnumner.minfin.am"
-TARGET_URL = f"{BASE_URL}hy/page/elektronayin_achurdi_haytararutyun_ev_hraver/"
+TARGET_URL = f"{BASE_URL}/hy/page/elektronayin_achurdi_haytararutyun_ev_hraver/"
 
 HEADERS = {
     "User-Agent": (
