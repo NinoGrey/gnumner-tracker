@@ -80,7 +80,6 @@ def extract_dates(block) -> tuple[datetime | None, str, str]:
     time_elem = block.find('p', class_='tender_time')
     text = time_elem.get_text() if time_elem else block.get_text()
 
-    # Ищем все даты (YYYY-MM-DD) и время (ЧЧ:ММ:СС или ЧЧ:ММ)
     raw_dates = re.findall(r'\b(\d{4}-\d{2}-\d{2})\b', text)
     raw_times = re.findall(r'\b(\d{2}:\d{2}(?::\d{2})?)\b', text)
 
@@ -92,7 +91,6 @@ def extract_dates(block) -> tuple[datetime | None, str, str]:
         pub_date_str = raw_dates[0]
         pub_time_str = raw_times[0] if raw_times else "00:00:00"
         
-        # Если на сайте время указано без секунд (ЧЧ:ММ), добавляем их
         if len(pub_time_str) == 5:
             pub_time_str += ":00"
 
@@ -133,30 +131,16 @@ def fetch_with_retries(session: requests.Session, url: str, retries: int = 3) ->
     return None
 
 
-def load_existing_data() -> tuple[list, set]:
-    """Загружает уже имеющиеся тендеры из data.json и создает Set ссылок."""
-    if os.path.exists('data.json'):
-        try:
-            with open('data.json', 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                urls = {item["url"] for item in data if isinstance(item, dict) and "url" in item}
-                return data, urls
-        except Exception as e:
-            log_msg(f"⚠️ Ошибка загрузки локальной базы data.json: {e}")
-    return [], set()
-
-
-def parse_section(section, existing_urls, new_tenders, session):
+def parse_section(section: dict, session: requests.Session, all_tenders: list):
     section_name = section["name"]
     start_url = section["url"]
 
     log_msg(f"\n📂 === Парсинг раздела: {section_name} ===")
 
     page = 1
-    stop_parsing = False
     added_in_section = 0
 
-    while not stop_parsing and page <= MAX_PAGES_PER_SECTION:
+    while page <= MAX_PAGES_PER_SECTION:
         url = start_url if page == 1 else f"{start_url.rstrip('/')}/{page}"
         log_msg(f"📡 [Стр. {page}] Загрузка: {url}")
 
@@ -176,7 +160,7 @@ def parse_section(section, existing_urls, new_tenders, session):
             break
 
         added_on_page = 0
-        skipped_duplicates = 0
+        stop_section = False
 
         for block in tender_blocks:
             link_elem = block.find('a', href=True)
@@ -190,18 +174,13 @@ def parse_section(section, existing_urls, new_tenders, session):
             if not title or len(title) < 3:
                 continue
 
-            # ИЗМЕНЕНИЕ: Если тендер уже есть в базе, не останавливаем весь парсинг,
-            # а просто пропускаем его и идем к следующему на этой странице
-            if full_url in existing_urls:
-                skipped_duplicates += 1
-                continue
-
             pub_date_dt, pub_date_str, end_date_str = extract_dates(block)
 
+            # Если дата тендера меньше целевой отсечки — останавливаем этот раздел
             if pub_date_dt and pub_date_dt < CUTOFF_DATE:
                 log_msg(f"⏹ ОСТАНОВКА РАЗДЕЛА: Найдена дата {pub_date_str} (раньше {CUTOFF_DATE.strftime('%d.%m.%Y')}).")
                 log_msg(f"    └ Тендер: \"{title[:60]}...\"")
-                stop_parsing = True
+                stop_section = True
                 break
 
             category = ""
@@ -210,8 +189,7 @@ def parse_section(section, existing_urls, new_tenders, session):
                 category = cat_match.group(1).strip()
                 title = title.replace(f"[{category}]", "").strip()
 
-            existing_urls.add(full_url)
-            new_tenders.append({
+            all_tenders.append({
                 "title": title,
                 "category": category,
                 "section": section_name,
@@ -222,23 +200,18 @@ def parse_section(section, existing_urls, new_tenders, session):
             added_on_page += 1
             added_in_section += 1
 
-        log_msg(f"    ├ Добавлено новых со страницы: {added_on_page} (пропущено дубликатов: {skipped_duplicates})")
-        log_msg(f"    └ Всего новых в этой сессии: {len(new_tenders)}")
+        log_msg(f"    └ Добавлено со страницы: {added_on_page}")
 
-        if stop_parsing:
+        if stop_section or added_on_page == 0:
             break
 
-        # Если на странице вообще не было блоков или все элементы оказались старыми / дубликатами,
-        # но при этом дошли до конца страницы — пробуем следующую страницу, 
-        # однако если страница пустая по добавлении, можно тоже выйти.
         page += 1
         time.sleep(DELAY_BETWEEN_PAGES)
 
-    log_msg(f"✅ Раздел «{section_name}» обработан. Добавлено новых: {added_in_section}.")
+    log_msg(f"✅ Раздел «{section_name}» обработан. Собрано: {added_in_section}.")
 
 
 def parse_date_for_sort(item):
-    """Преобразует строку даты (DD.MM.YYYY HH:MM:SS или DD.MM.YYYY) в объект datetime для сортировки."""
     date_str = item["date"]
     try:
         return datetime.strptime(date_str, "%d.%m.%Y %H:%M:%S")
@@ -252,26 +225,19 @@ def parse_date_for_sort(item):
 def main():
     try:
         session = requests.Session()
+        all_tenders = []
 
-        # 1. Загрузка ранее спасенных тендеров
-        existing_tenders, existing_urls = load_existing_data()
-        log_msg(f"📂 Загружена локальная база: {len(existing_tenders)} сохраненных тендеров.")
+        log_msg(f"🚀 Старт полного обновления базы. Отсечка по дате: {CUTOFF_DATE.strftime('%d.%m.%Y')}")
 
-        new_tenders = []
-        log_msg(f"🚀 Старт парсинга. Отсечка по дате публикации: {CUTOFF_DATE.strftime('%d.%m.%Y')}")
-
-        # 2. Сбор только fresh-данных
+        # Сбор данных по всем разделам «в лоб»
         for section in SECTIONS:
-            parse_section(section, existing_urls, new_tenders, session)
+            parse_section(section, session, all_tenders)
 
-        # 3. Объединение свежих тендеров со старыми
-        all_tenders = new_tenders + existing_tenders
-
-        # 4. Сортировка всей базы по дате публикации (от новых к старым)
+        # Сортировка всей базы от новых к старым
         all_tenders.sort(key=parse_date_for_sort, reverse=True)
-        log_msg(f"📊 Добавлено новых: {len(new_tenders)}. Всего в базе: {len(all_tenders)}.")
+        log_msg(f"📊 Всего собрано тендеров: {len(all_tenders)}.")
 
-        # 5. Перезапись файлов
+        # Полная перезапись файла под ноль
         with open('data.json', 'w', encoding='utf-8') as f:
             json.dump(all_tenders, f, ensure_ascii=False, indent=2)
 
@@ -283,7 +249,7 @@ def main():
         with open('log.json', 'w', encoding='utf-8') as f:
             json.dump(log_payload, f, ensure_ascii=False, indent=2)
 
-        print("💾 Файлы data.json и log.json успешно обновлены.")
+        print("💾 Файлы data.json и log.json успешно перезаписаны.")
     except Exception as e:
         log_msg(f"❌ Критическая ошибка в main: {e}")
         exit(1)
