@@ -3,530 +3,278 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Мониторинг Госзакупок Армении (gnumner.minfin.am)</title>
-
-  <!-- Подключение шрифтов и Pico CSS -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
-
+  <title>Мониторинг тендеров</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <style>
-    /* Темы оформления: Темная (по умолчанию) и Светлая */
-    html[data-theme="dark"] {
-      --bg-main: #090d16;
-      --card-bg: #111827;
-      --card-border: #1f293d;
-      --card-border-hover: #334155;
+    :root {
+      --bg-main: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
       --accent-color: #38bdf8;
-      --accent-glow: rgba(56, 189, 248, 0.15);
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
-      --text-subtle: #64748b;
-      --header-h2: #ffffff;
-      --table-th-bg: #0d1322;
-      --table-th-color: #94a3b8;
-      --table-tr-hover: rgba(30, 41, 59, 0.5);
-      --table-td-border: #1a2333;
-      --terminal-bg: #030712;
-      --terminal-header-bg: #0b0f19;
-      --terminal-text: #38bdf8;
-      --input-bg: #111827;
-      --input-date-bg: #0b0f19;
-      --badge-default-bg: rgba(148, 163, 184, 0.1);
-      --badge-default-color: #cbd5e1;
-      --badge-default-border: rgba(148, 163, 184, 0.2);
+      --accent-hover: #0284c7;
     }
 
-    html[data-theme="light"] {
-      --bg-main: #f1f5f9;
+    [data-theme="light"] {
+      --bg-main: #f8fafc;
       --card-bg: #ffffff;
       --card-border: #e2e8f0;
-      --card-border-hover: #cbd5e1;
-      --accent-color: #0284c7;
-      --accent-glow: rgba(2, 132, 199, 0.12);
       --text-main: #0f172a;
-      --text-muted: #475569;
-      --text-subtle: #94a3b8;
-      --header-h2: #0f172a;
-      --table-th-bg: #f8fafc;
-      --table-th-color: #475569;
-      --table-tr-hover: rgba(241, 245, 249, 0.8);
-      --table-td-border: #f1f5f9;
-      --terminal-bg: #0f172a;
-      --terminal-header-bg: #1e293b;
-      --terminal-text: #38bdf8;
-      --input-bg: #ffffff;
-      --input-date-bg: #f8fafc;
-      --badge-default-bg: rgba(100, 116, 139, 0.08);
-      --badge-default-color: #475569;
-      --badge-default-border: rgba(100, 116, 139, 0.2);
+      --text-muted: #64748b;
+      --accent-color: #0284c7;
+      --accent-hover: #0369a1;
     }
 
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
-
-    body { 
-      padding: 30px 15px; 
-      background-color: var(--bg-main); 
+    body {
+      background-color: var(--bg-main);
       color: var(--text-main);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding-top: 20px;
       transition: background-color 0.3s ease, color 0.3s ease;
     }
 
-    .container { max-width: 1440px; margin: 0 auto; }
-
-    /* Шапка сайта */
-    header { 
-      margin-bottom: 24px; 
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      padding: 20px 24px; 
-      border-radius: 16px;
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      flex-wrap: wrap; 
-      gap: 16px; 
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
-      transition: background-color 0.3s ease, border-color 0.3s ease;
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      gap: 16px;
     }
 
-    .header-left { display: flex; align-items: center; gap: 16px; }
-    .header-title { display: flex; align-items: center; gap: 12px; }
-    .header-title h2 { margin: 0; font-weight: 700; font-size: 1.4em; letter-spacing: -0.02em; color: var(--header-h2); }
-    .header-subtitle { margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.88em; }
-
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      background-color: #10b981;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-      display: inline-block;
-      flex-shrink: 0;
+    .header-title {
+      margin: 0;
+      font-size: 1.75rem;
+      font-weight: 700;
     }
 
-    .header-actions {
+    .header-controls {
       display: flex;
       align-items: center;
       gap: 12px;
     }
 
-    /* Кнопки управления в шапке */
     .btn-icon {
+      all: unset;
+      box-sizing: border-box;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       color: var(--text-muted);
       border-radius: 10px;
       width: 42px;
       height: 42px;
+      min-width: 42px;
+      min-height: 42px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: all 0.2s ease;
+      padding: 0 !important;
+      margin: 0 !important;
     }
+
     .btn-icon:hover {
       border-color: var(--accent-color);
       color: var(--accent-color);
       transform: translateY(-1px);
     }
-    .btn-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-    .btn-update {
-      margin: 0;
-      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-      border: 1px solid #38bdf8;
-      border-radius: 10px;
-      padding: 10px 20px;
-      font-weight: 600;
-      font-size: 0.9em;
-      color: #fff;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
-    }
-    .btn-update svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .btn-update:hover { 
-      transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(56, 189, 248, 0.35); 
-    }
-    .btn-update:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    .spinning { animation: spin 1s linear infinite; }
-
-    /* Аккордеон логов */
-    details.log-accordion {
-      background-color: var(--terminal-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      margin-bottom: 24px;
-      overflow: hidden;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
-    }
-    details.log-accordion summary {
-      padding: 12px 18px;
-      font-size: 0.85em;
-      color: var(--accent-color);
-      cursor: pointer;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 500;
-      user-select: none;
-      background-color: var(--terminal-header-bg);
-      border-bottom: 1px solid transparent;
-      transition: background 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    details.log-accordion summary svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
-    details.log-accordion[open] summary {
-      border-bottom-color: var(--card-border);
-    }
-    .terminal-box {
-      margin: 0;
-      padding: 14px 18px;
-      background-color: var(--terminal-bg);
-      color: var(--terminal-text);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8em;
-      line-height: 1.6;
-      max-height: 220px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    }
-
-    /* Поиск, фильтры и статистика */
-    .toolbar {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-    .filters-row {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: flex-end;
-    }
-    .search-box { flex: 1; min-width: 280px; }
-    .search-wrapper { position: relative; width: 100%; }
-    .search-icon-svg {
-      position: absolute;
-      left: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-subtle);
-      pointer-events: none;
-      width: 18px;
-      height: 18px;
+    .btn-icon svg {
+      width: 20px;
+      height: 20px;
       stroke: currentColor;
       fill: none;
       stroke-width: 2;
       stroke-linecap: round;
       stroke-linejoin: round;
-    }
-    .search-box input {
-      width: 100%;
-      font-size: 0.95em;
-      padding: 12px 16px 12px 48px;
-      background-color: var(--input-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      color: var(--text-main);
-      margin-bottom: 0;
-      transition: all 0.2s;
-    }
-    .search-box input:focus {
-      border-color: var(--accent-color);
-      box-shadow: 0 0 0 3px var(--accent-glow);
+      pointer-events: none;
     }
 
-    /* Блок фильтрации по дате */
+    .toolbar {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    .filters-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .search-box {
+      flex: 1 1 320px;
+      margin-bottom: 0;
+    }
+
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-icon-svg {
+      position: absolute;
+      left: 14px;
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-muted);
+      fill: none;
+      stroke-width: 2;
+      pointer-events: none;
+    }
+
+    .search-wrapper input[type="search"] {
+      padding-left: 42px;
+      margin-bottom: 0;
+      background-color: var(--bg-main);
+      border-color: var(--card-border);
+      color: var(--text-main);
+      border-radius: 10px;
+      height: 44px;
+    }
+
     .date-filter-group {
       display: flex;
       gap: 10px;
-      align-items: flex-end;
-      background-color: var(--card-bg);
+      align-items: center;
+      background-color: var(--bg-main);
       border: 1px solid var(--card-border);
-      padding: 8px 14px;
-      border-radius: 12px;
-      transition: background-color 0.3s, border-color 0.3s;
+      padding: 4px 12px;
+      border-radius: 10px;
+      height: 44px;
     }
+
     .date-field {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      align-items: center;
+      gap: 6px;
     }
+
     .date-field label {
-      font-size: 0.75em;
+      font-size: 0.8em;
       color: var(--text-muted);
       margin-bottom: 0;
-      font-weight: 500;
-    }
-    .date-field input[type="date"] {
-      margin-bottom: 0;
-      padding: 6px 10px;
-      background-color: var(--input-date-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      color: var(--text-main);
-      font-size: 0.88em;
-      font-family: 'JetBrains Mono', monospace;
-    }
-    html[data-theme="dark"] .date-field input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(0.8);
-      cursor: pointer;
-    }
-    html[data-theme="light"] .date-field input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(0.2);
-      cursor: pointer;
-    }
-    .btn-reset-dates {
-      margin-bottom: 0;
-      padding: 7px 12px;
-      background-color: var(--badge-default-bg);
-      border: 1px solid var(--card-border);
-      color: var(--text-muted);
-      border-radius: 8px;
-      font-size: 0.82em;
-      cursor: pointer;
-      transition: all 0.2s;
+      font-weight: 600;
       white-space: nowrap;
     }
+
+    .date-field input[type="date"] {
+      margin-bottom: 0;
+      padding: 4px 8px;
+      font-size: 0.85em;
+      border: none;
+      background: transparent;
+      color: var(--text-main);
+      height: auto;
+    }
+
+    .btn-reset-dates {
+      margin-bottom: 0;
+      padding: 4px 10px;
+      font-size: 0.8em;
+      height: 28px;
+      line-height: 1;
+      background-color: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
     .btn-reset-dates:hover {
-      background-color: var(--card-border-hover);
+      background-color: var(--card-bg);
       color: var(--text-main);
     }
 
-    .stats { 
-      color: var(--text-muted); 
-      font-size: 0.88em; 
-      font-weight: 500; 
+    .stats {
+      color: var(--text-muted);
+      font-size: 0.85em;
+      font-weight: 500;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--card-border);
     }
-    .stats strong { color: var(--text-main); }
 
-    /* Карточка таблицы с жесткой сеткой */
     .table-container {
-      background-color: var(--card-bg);
+      background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      overflow-x: auto;
-      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
-      transition: background-color 0.3s, border-color 0.3s;
+      overflow: hidden;
     }
-    
-    table { 
-      margin-bottom: 0 !important; 
-      width: 100% !important; 
-      border-collapse: collapse !important; 
-      table-layout: fixed !important;
+
+    table {
+      margin-bottom: 0;
+      table-layout: fixed;
+      width: 100%;
     }
 
     th {
-      background-color: var(--table-th-bg) !important;
-      color: var(--table-th-color) !important;
-      font-size: 0.8em !important;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 14px 12px !important;
-      border-bottom: 1px solid var(--card-border) !important;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      background-color: var(--bg-main);
+      color: var(--text-muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--card-border);
     }
-    th.sortable {
-      cursor: pointer;
-      user-select: none;
-      transition: color 0.2s, background-color 0.2s;
-    }
-    th.sortable:hover {
-      color: var(--accent-color) !important;
-    }
-    .sort-icon {
-      font-size: 0.85em;
-      margin-left: 2px;
-      color: var(--text-subtle);
-      display: inline-block;
-    }
-    .sort-active { color: var(--accent-color); font-weight: bold; }
 
     td {
-      padding: 14px 12px !important;
-      border-bottom: 1px solid var(--table-td-border) !important;
-      vertical-align: middle !important;
-      font-size: 0.9em;
-      overflow-wrap: break-word;
-      word-break: break-word;
+      border-bottom: 1px solid var(--card-border);
       color: var(--text-main);
-    }
-    tbody tr { transition: background-color 0.15s; }
-    tbody tr:hover { background-color: var(--table-tr-hover); }
-    tbody tr:last-child td { border-bottom: none !important; }
-
-    /* Нумерация тендеров */
-    .num-cell {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-subtle);
-      font-weight: 600;
-      white-space: nowrap;
-    }
-
-    /* Бейджи категорий */
-    .badge-category {
-      display: inline-block;
-      background-color: rgba(56, 189, 248, 0.1);
-      color: var(--accent-color);
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-size: 0.78em;
-      font-weight: 600;
-      margin-right: 8px;
-      margin-bottom: 4px;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* Базовый стиль бейджа процедуры */
-    .badge-section {
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 8px;
-      font-size: 0.8em;
-      font-weight: 600;
-      line-height: 1.35;
-      white-space: normal;
       word-break: break-word;
-      max-width: 100%;
     }
 
-    /* Цветовая палитра типов процедур */
-    .section-proc-1 { background: rgba(56, 189, 248, 0.12); color: #0284c7; border: 1px solid rgba(56, 189, 248, 0.3); }
-    html[data-theme="dark"] .section-proc-1 { color: #38bdf8; }
-    
-    .section-proc-2 { background: rgba(168, 85, 247, 0.12); color: #7e22ce; border: 1px solid rgba(168, 85, 247, 0.3); }
-    html[data-theme="dark"] .section-proc-2 { color: #c084fc; }
-
-    .section-proc-3 { background: rgba(34, 197, 94, 0.12); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3); }
-    html[data-theme="dark"] .section-proc-3 { color: #4ade80; }
-
-    .section-proc-4 { background: rgba(251, 146, 60, 0.12); color: #c2410c; border: 1px solid rgba(251, 146, 60, 0.3); }
-    html[data-theme="dark"] .section-proc-4 { color: #fb923c; }
-
-    .section-proc-5 { background: rgba(244, 63, 94, 0.12); color: #be123c; border: 1px solid rgba(244, 63, 94, 0.3); }
-    html[data-theme="dark"] .section-proc-5 { color: #fb7185; }
-
-    .section-proc-default { background: var(--badge-default-bg); color: var(--badge-default-color); border: 1px solid var(--badge-default-border); }
-
-    /* Компактная кнопка-иконка ссылки */
-    .icon-link-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      color: var(--accent-color);
-      background-color: rgba(56, 189, 248, 0.08);
-      border: 1px solid rgba(56, 189, 248, 0.2);
-      border-radius: 10px;
-      transition: all 0.2s;
-      text-decoration: none;
+    tr:last-child td {
+      border-bottom: none;
     }
-    .icon-link-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .icon-link-btn:hover {
-      background-color: var(--accent-color);
-      color: #fff;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px var(--accent-glow);
-    }
-
-    .date-cell {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-main);
-      font-size: 0.85em;
-      line-height: 1.4;
-      white-space: normal;
-    }
-    .date-time {
-      color: var(--text-muted);
-      font-size: 0.85em;
-      display: block;
-    }
-
-    .tender-title-cell { line-height: 1.5; color: var(--text-main); font-weight: 500; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="header-left">
-        <span class="status-dot"></span>
-        <div>
-          <div class="header-title">
-            <h2>Мониторинг Госзакупок Армении</h2>
-          </div>
-          <p class="header-subtitle">Автоматизированная система парсинга портала gnumner.minfin.am</p>
-        </div>
-      </div>
-      
-      <div class="header-actions">
-        <!-- Кнопка переключения темы -->
-        <button class="btn-icon" id="themeToggleBtn" onclick="toggleTheme()" title="Переключить тему">
-          <!-- Иконка солнца (для темной темы) -->
-          <svg id="sunIcon" style="display: none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-          <!-- Иконка луны (для светлой темы) -->
-          <svg id="moonIcon" style="display: block;" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+  <main class="container">
+    
+    <header class="header-bar">
+      <h1 class="header-title">Мониторинг тендеров</h1>
+      <div class="header-controls">
+        <button id="themeToggle" class="btn-icon" title="Переключить тему" onclick="toggleTheme()">
+          <svg id="themeIcon" viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
         </button>
-
-        <!-- Кнопка обновления -->
-        <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">
-          <svg id="updateIcon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-          <span>Обновить базу</span>
-        </button>
+        <button class="contrast" style="margin-bottom:0; height: 42px; display: inline-flex; align-items: center;" onclick="location.reload()">Обновить базу</button>
       </div>
     </header>
 
-    <details class="log-accordion" open>
-      <summary>
-        <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-        Лог сканирования системы <span id="logTime">(загрузка...)</span>
-      </summary>
-      <pre class="terminal-box" id="terminalLogs">Загрузка логов последнего сканирования...</pre>
-    </details>
-
     <div class="toolbar">
       <div class="filters-row">
-        <!-- Поиск -->
         <div class="search-box">
           <div class="search-wrapper">
-            <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="search" id="searchInput" placeholder="Поиск по названию, процедуре, коду категории [XXXX]..." oninput="filterTable()">
+            <svg class="search-icon-svg" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="search" id="searchInput" placeholder="Поиск по названию, процедуре, коду..." oninput="filterTable()">
           </div>
         </div>
 
-        <!-- Фильтр по диапазону дат -->
         <div class="date-filter-group">
           <div class="date-field">
-            <label for="dateFrom">Дата С:</label>
+            <label for="dateFrom">С:</label>
             <input type="date" id="dateFrom" onchange="filterTable()">
           </div>
           <div class="date-field">
-            <label for="dateTo">Дата ПО:</label>
+            <label for="dateTo">ПО:</label>
             <input type="date" id="dateTo" onchange="filterTable()">
           </div>
-          <button class="btn-reset-dates" onclick="resetFilters()">Сброс</button>
+          <button class="btn-reset-dates" onclick="resetFilters()">Сбросить</button>
         </div>
       </div>
 
@@ -534,263 +282,122 @@
     </div>
 
     <div class="table-container">
-      <table>
+      <table role="grid">
         <thead>
           <tr>
-            <th class="sortable" onclick="handleSort('num')" style="width: 5%;">№ <span id="sort-num" class="sort-icon">↕</span></th>
-            <th class="sortable" onclick="handleSort('section')" style="width: 17%;">Тип процедуры <span id="sort-section" class="sort-icon">↕</span></th>
-            <th class="sortable" onclick="handleSort('date')" style="width: 13%;">Публикация <span id="sort-date" class="sort-icon">↕</span></th>
-            <th class="sortable" onclick="handleSort('end_date')" style="width: 13%;">Завершение <span id="sort-end_date" class="sort-icon">↕</span></th>
-            <th class="sortable" onclick="handleSort('title')" style="width: 45%;">Наименование тендера <span id="sort-title" class="sort-icon">↕</span></th>
-            <th style="width: 7%; text-align: center;">Ссылка</th>
+            <th style="width: 18%;">Код / Процедура</th>
+            <th style="width: 35%;">Наименование</th>
+            <th style="width: 25%;">Заказчик</th>
+            <th style="width: 12%;">Окончание</th>
+            <th style="width: 10%;">Ссылка</th>
           </tr>
         </thead>
-        <tbody id="tableBody">
-          <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">Загрузка базы данных...</td></tr>
+        <tbody id="tendersBody">
         </tbody>
       </table>
     </div>
-  </div>
+
+  </main>
 
   <script>
-    const GH_USER = 'NinoGrey';
-    const GH_REPO = 'gnumner-tracker';
-    const WORKFLOW_ID = 'tracker.yml';
-
     let allTenders = [];
-    let displayedTenders = [];
-
-    let currentSortField = 'date';
-    let currentSortOrder = 'desc';
-
-    // Управление темами
-    function initTheme() {
-      const savedTheme = localStorage.getItem('theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      updateThemeIcons(savedTheme);
-    }
 
     function toggleTheme() {
-      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const html = document.documentElement;
+      const themeIcon = document.getElementById('themeIcon');
+      const currentTheme = html.getAttribute('data-theme');
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', newTheme);
+      
+      html.setAttribute('data-theme', newTheme);
       localStorage.setItem('theme', newTheme);
-      updateThemeIcons(newTheme);
-    }
-
-    function updateThemeIcons(theme) {
-      const sunIcon = document.getElementById('sunIcon');
-      const moonIcon = document.getElementById('moonIcon');
-      if (theme === 'dark') {
-        sunIcon.style.display = 'block';
-        moonIcon.style.display = 'none';
+      
+      if (newTheme === 'light') {
+        themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
       } else {
-        sunIcon.style.display = 'none';
-        moonIcon.style.display = 'block';
+        themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
       }
     }
 
-    initTheme();
+    (function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      if (savedTheme === 'light') {
+        toggleTheme();
+      }
+    })();
 
     async function loadData() {
       try {
-        const res = await fetch('data.json?v=' + new Date().getTime());
-        const rawData = await res.json();
-
-        const total = rawData.length;
-        allTenders = rawData.map((item, index) => ({
-          ...item,
-          num: total - index
-        }));
-
+        const response = await fetch('data.json');
+        allTenders = await response.json();
         filterTable();
       } catch (err) {
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #ef4444;">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
-        document.getElementById('statsCounter').innerText = 'Найдено тендеров: 0';
-      }
-
-      loadLogs();
-    }
-
-    async function loadLogs() {
-      try {
-        const res = await fetch('log.json?v=' + new Date().getTime());
-        const logData = await res.json();
-
-        document.getElementById('logTime').innerText = `[Обновлено: ${logData.timestamp || '—'}]`;
-        document.getElementById('terminalLogs').innerText = logData.logs.join('\n');
-      } catch (err) {
-        document.getElementById('logTime').innerText = '';
-        document.getElementById('terminalLogs').innerText = 'Лог последнего сканирования недоступен.';
+        document.getElementById('statsCounter').innerText = 'Ошибка загрузки data.json';
+        console.error(err);
       }
     }
 
-    function parseDateStr(str) {
-      if (!str || str === '—') return new Date(0);
-      
-      const parts = str.trim().split(' ');
-      const dateParts = parts[0].split('.');
-      
-      if (dateParts.length !== 3) return new Date(0);
-
-      const day = parseInt(dateParts[0], 10);
-      const month = parseInt(dateParts[1], 10) - 1;
-      const year = parseInt(dateParts[2], 10);
-
-      let hours = 0, minutes = 0, seconds = 0;
-
-      if (parts[1]) {
-        const timeParts = parts[1].split(':');
-        if (timeParts.length >= 2) {
-          hours = parseInt(timeParts[0], 10);
-          minutes = parseInt(timeParts[1], 10);
-        }
-        if (timeParts.length === 3) {
-          seconds = parseInt(timeParts[2], 10);
-        }
-      }
-
-      return new Date(year, month, day, hours, minutes, seconds);
-    }
-
-    function formatDateToISO(str) {
-      if (!str || str === '—') return '';
-      const parts = str.trim().split(' ')[0].split('.');
+    function parseDate(dateStr) {
+      if (!dateStr) return null;
+      const parts = dateStr.split('.');
       if (parts.length === 3) {
-        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        return new Date(parts[2], parts[1] - 1, parts[0]);
       }
-      return '';
-    }
-
-    function handleSort(field) {
-      if (currentSortField === field) {
-        currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
-      } else {
-        currentSortField = field;
-        currentSortOrder = 'asc';
-      }
-      applySortAndRender();
-    }
-
-    function applySortAndRender() {
-      ['num', 'section', 'date', 'end_date', 'title'].forEach(f => {
-        const icon = document.getElementById(`sort-${f}`);
-        if (f === currentSortField) {
-          icon.innerText = currentSortOrder === 'asc' ? '▲' : '▼';
-          icon.className = 'sort-icon sort-active';
-        } else {
-          icon.innerText = '↕';
-          icon.className = 'sort-icon';
-        }
-      });
-
-      displayedTenders.sort((a, b) => {
-        let valA = a[currentSortField] || '';
-        let valB = b[currentSortField] || '';
-
-        let result = 0;
-
-        if (currentSortField === 'num') {
-          result = a.num - b.num;
-        } else if (currentSortField === 'date' || currentSortField === 'end_date') {
-          result = parseDateStr(valA) - parseDateStr(valB);
-        } else {
-          result = valA.toString().localeCompare(valB.toString(), 'ru');
-        }
-
-        return currentSortOrder === 'asc' ? result : -result;
-      });
-
-      renderTable(displayedTenders);
-    }
-
-    function getSectionClass(text) {
-      if (!text) return 'section-proc-default';
-      const t = text.toLowerCase();
-      
-      if (t.includes('բաց') || t.includes('открыт')) return 'section-proc-1';        
-      if (t.includes('գնանշմ') || t.includes('котиров')) return 'section-proc-2';    
-      if (t.includes('մեկ անձ') || t.includes('единств')) return 'section-proc-3';  
-      if (t.includes('աճուրդ') || t.includes('аукцион')) return 'section-proc-4';    
-      if (t.includes('փակ') || t.includes('закрыт')) return 'section-proc-5';        
-      
-      return 'section-proc-default';
-    }
-
-    function formatCellDate(str) {
-      if (!str || str === '—') return '—';
-      const parts = str.trim().split(' ');
-      if (parts.length > 1) {
-        return `${parts[0]} <span class="date-time">${parts.slice(1).join(' ')}</span>`;
-      }
-      return parts[0];
-    }
-
-    function renderTable(data) {
-      const tbody = document.getElementById('tableBody');
-      document.getElementById('statsCounter').innerHTML = `Отображено тендеров: <strong>${data.length}</strong> (из ${allTenders.length} в базе)`;
-
-      if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">Ничего не найдено по вашему запросу.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = data.map(item => {
-        const categoryBadge = item.category 
-          ? `<span class="badge-category">${item.category}</span>`
-          : '';
-
-        const sectionClass = getSectionClass(item.section);
-        const sectionBadge = item.section 
-          ? `<span class="badge-section ${sectionClass}">${item.section}</span>`
-          : '—';
-
-        const pubDateFormatted = formatCellDate(item.date);
-        const endDateFormatted = formatCellDate(item.end_date);
-
-        return `
-          <tr>
-            <td class="num-cell">${item.num}</td>
-            <td>${sectionBadge}</td>
-            <td class="date-cell">${pubDateFormatted}</td>
-            <td class="date-cell">${endDateFormatted}</td>
-            <td class="tender-title-cell">${categoryBadge}${item.title}</td>
-            <td style="text-align: center;"><a href="${item.url}" class="icon-link-btn" target="_blank" rel="noopener" title="Открыть тендер"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></a></td>
-          </tr>
-        `;
-      }).join('');
+      return new Date(dateStr);
     }
 
     function filterTable() {
-      const query = document.getElementById('searchInput').value.toLowerCase().trim();
-      const dateFrom = document.getElementById('dateFrom').value;
-      const dateTo = document.getElementById('dateTo').value;
+      const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+      const dateFromVal = document.getElementById('dateFrom').value;
+      const dateToVal = document.getElementById('dateTo').value;
 
-      displayedTenders = allTenders.filter(item => {
-        const titleMatch = item.title && item.title.toLowerCase().includes(query);
-        const categoryMatch = item.category && item.category.toLowerCase().includes(query);
-        const sectionMatch = item.section && item.section.toLowerCase().includes(query);
-        const dateMatch = item.date && item.date.toLowerCase().includes(query);
-        const endDateMatch = item.end_date && item.end_date.toLowerCase().includes(query);
-        const numMatch = item.num && item.num.toString() === query;
+      const dateFrom = dateFromVal ? new Date(dateFromVal) : null;
+      const dateTo = dateToVal ? new Date(dateToVal) : null;
 
-        const matchesText = !query || (titleMatch || categoryMatch || sectionMatch || dateMatch || endDateMatch || numMatch);
+      if (dateTo) dateTo.setHours(23, 59, 59, 999);
 
-        const itemDateISO = formatDateToISO(item.date);
-        let matchesDateFrom = true;
-        let matchesDateTo = true;
+      const filtered = allTenders.filter(item => {
+        const textMatch = !searchVal || 
+          (item.code && item.code.toLowerCase().includes(searchVal)) ||
+          (item.title && item.title.toLowerCase().includes(searchVal)) ||
+          (item.customer && item.customer.toLowerCase().includes(searchVal)) ||
+          (item.type && item.type.toLowerCase().includes(searchVal));
 
-        if (dateFrom) {
-          matchesDateFrom = itemDateISO >= dateFrom;
+        const tenderDate = parseDate(item.end_date);
+        let dateMatch = true;
+
+        if (tenderDate && !isNaN(tenderDate.getTime())) {
+          if (dateFrom && tenderDate < dateFrom) dateMatch = false;
+          if (dateTo && tenderDate > dateTo) dateMatch = false;
         }
-        if (dateTo) {
-          matchesDateTo = itemDateISO <= dateTo;
-        }
 
-        return matchesText && matchesDateFrom && matchesDateTo;
+        return textMatch && dateMatch;
       });
 
-      applySortAndRender();
+      renderTable(filtered);
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('tendersBody');
+      tbody.innerHTML = '';
+
+      document.getElementById('statsCounter').innerText = `Отображено тендеров: ${data.length} из ${allTenders.length}`;
+
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 24px;">Записи не найдены</td></tr>';
+        return;
+      }
+
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${item.code || '-'}</strong><br><small style="color:var(--text-muted);">${item.type || ''}</small></td>
+          <td>${item.title || '-'}</td>
+          <td>${item.customer || '-'}</td>
+          <td>${item.end_date || '-'}</td>
+          <td>${item.link ? `<a href="${item.link}" target="_blank" rel="noopener">Открыть</a>` : '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
     function resetFilters() {
@@ -800,57 +407,7 @@
       filterTable();
     }
 
-    async function triggerWorkflow() {
-      const btn = document.getElementById('updateBtn');
-      const icon = document.getElementById('updateIcon');
-
-      let token = localStorage.getItem('gh_token');
-      if (!token) {
-        token = prompt('Введите ваш GitHub Personal Access Token (ghp_...):');
-        if (!token) return;
-        localStorage.setItem('gh_token', token.trim());
-      }
-
-      btn.disabled = true;
-      icon.classList.add('spinning');
-      btn.querySelector('span').innerText = 'Запуск парсера...';
-      document.getElementById('terminalLogs').innerText = '🚀 Запуск GitHub Actions workflow...\nОжидание выполнения задачи на сервере...';
-
-      try {
-        const response = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/${WORKFLOW_ID}/dispatches`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/vnd.github+json',
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ ref: 'main' })
-        });
-
-        if (response.ok) {
-          btn.querySelector('span').innerText = 'Сканирование сайта...';
-          setTimeout(() => {
-            btn.querySelector('span').innerText = 'Обновить базу';
-            icon.classList.remove('spinning');
-            btn.disabled = false;
-            loadData();
-          }, 25000);
-        } else {
-          localStorage.removeItem('gh_token');
-          alert('Ошибка доступа! Проверьте токен.');
-          btn.querySelector('span').innerText = 'Обновить базу';
-          icon.classList.remove('spinning');
-          btn.disabled = false;
-        }
-      } catch (err) {
-        alert('Сбой сети при подключении к GitHub API.');
-        btn.querySelector('span').innerText = 'Обновить базу';
-        icon.classList.remove('spinning');
-        btn.disabled = false;
-      }
-    }
-
-    loadData();
+    document.addEventListener('DOMContentLoaded', loadData);
   </script>
 </body>
 </html>
