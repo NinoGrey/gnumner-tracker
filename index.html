@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,14 +12,55 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
 
   <style>
-    :root {
+    /* Темы оформления: Темная (по умолчанию) и Светлая */
+    html[data-theme="dark"] {
       --bg-main: #090d16;
       --card-bg: #111827;
       --card-border: #1f293d;
+      --card-border-hover: #334155;
       --accent-color: #38bdf8;
       --accent-glow: rgba(56, 189, 248, 0.15);
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
+      --text-subtle: #64748b;
+      --header-h2: #ffffff;
+      --table-th-bg: #0d1322;
+      --table-th-color: #94a3b8;
+      --table-tr-hover: rgba(30, 41, 59, 0.5);
+      --table-td-border: #1a2333;
+      --terminal-bg: #030712;
+      --terminal-header-bg: #0b0f19;
+      --terminal-text: #38bdf8;
+      --input-bg: #111827;
+      --input-date-bg: #0b0f19;
+      --badge-default-bg: rgba(148, 163, 184, 0.1);
+      --badge-default-color: #cbd5e1;
+      --badge-default-border: rgba(148, 163, 184, 0.2);
+    }
+
+    html[data-theme="light"] {
+      --bg-main: #f1f5f9;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --card-border-hover: #cbd5e1;
+      --accent-color: #0284c7;
+      --accent-glow: rgba(2, 132, 199, 0.12);
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-subtle: #94a3b8;
+      --header-h2: #0f172a;
+      --table-th-bg: #f8fafc;
+      --table-th-color: #475569;
+      --table-tr-hover: rgba(241, 245, 249, 0.8);
+      --table-td-border: #f1f5f9;
+      --terminal-bg: #0f172a;
+      --terminal-header-bg: #1e293b;
+      --terminal-text: #38bdf8;
+      --input-bg: #ffffff;
+      --input-date-bg: #f8fafc;
+      --badge-default-bg: rgba(100, 116, 139, 0.08);
+      --badge-default-color: #475569;
+      --badge-default-border: rgba(100, 116, 139, 0.2);
     }
 
     *, *::before, *::after {
@@ -31,6 +72,7 @@
       background-color: var(--bg-main); 
       color: var(--text-main);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
     .container { max-width: 1440px; margin: 0 auto; }
@@ -47,11 +89,13 @@
       align-items: center; 
       flex-wrap: wrap; 
       gap: 16px; 
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
     }
 
+    .header-left { display: flex; align-items: center; gap: 16px; }
     .header-title { display: flex; align-items: center; gap: 12px; }
-    .header-title h2 { margin: 0; font-weight: 700; font-size: 1.5em; letter-spacing: -0.02em; color: #fff; }
+    .header-title h2 { margin: 0; font-weight: 700; font-size: 1.4em; letter-spacing: -0.02em; color: var(--header-h2); }
     .header-subtitle { margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.88em; }
 
     .status-dot {
@@ -59,13 +103,39 @@
       height: 10px;
       background-color: #10b981;
       border-radius: 50%;
-      box-shadow: 0 0 10px #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
       display: inline-block;
+      flex-shrink: 0;
     }
 
-    /* Кнопка обновления */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Кнопки управления в шапке */
+    .btn-icon {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 10px;
+      width: 42px;
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-icon:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      transform: translateY(-1px);
+    }
+    .btn-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
     .btn-update {
-      width: auto;
       margin: 0;
       background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
       border: 1px solid #38bdf8;
@@ -75,23 +145,33 @@
       font-size: 0.9em;
       color: #fff;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
     }
+    .btn-update svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .btn-update:hover { 
       transform: translateY(-1px);
-      box-shadow: 0 6px 16px rgba(56, 189, 248, 0.4); 
+      box-shadow: 0 6px 16px rgba(56, 189, 248, 0.35); 
     }
     .btn-update:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spinning { animation: spin 1s linear infinite; }
+
     /* Аккордеон логов */
     details.log-accordion {
-      background-color: #030712;
+      background-color: var(--terminal-bg);
       border: 1px solid var(--card-border);
       border-radius: 14px;
       margin-bottom: 24px;
       overflow: hidden;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
     }
     details.log-accordion summary {
       padding: 12px 18px;
@@ -101,21 +181,22 @@
       font-family: 'JetBrains Mono', monospace;
       font-weight: 500;
       user-select: none;
-      background-color: #0b0f19;
+      background-color: var(--terminal-header-bg);
       border-bottom: 1px solid transparent;
       transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+    details.log-accordion summary svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
     details.log-accordion[open] summary {
       border-bottom-color: var(--card-border);
-    }
-    details.log-accordion summary:hover {
-      background-color: #111827;
     }
     .terminal-box {
       margin: 0;
       padding: 14px 18px;
-      background-color: #030712;
-      color: #38bdf8;
+      background-color: var(--terminal-bg);
+      color: var(--terminal-text);
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.8em;
       line-height: 1.6;
@@ -139,22 +220,29 @@
     }
     .search-box { flex: 1; min-width: 280px; }
     .search-wrapper { position: relative; width: 100%; }
-    .search-icon {
+    .search-icon-svg {
       position: absolute;
       left: 16px;
       top: 50%;
       transform: translateY(-50%);
-      color: #64748b;
+      color: var(--text-subtle);
       pointer-events: none;
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .search-box input {
       width: 100%;
       font-size: 0.95em;
-      padding: 12px 16px 12px 44px;
-      background-color: var(--card-bg);
+      padding: 12px 16px 12px 48px;
+      background-color: var(--input-bg);
       border: 1px solid var(--card-border);
       border-radius: 12px;
-      color: #fff;
+      color: var(--text-main);
       margin-bottom: 0;
       transition: all 0.2s;
     }
@@ -172,6 +260,7 @@
       border: 1px solid var(--card-border);
       padding: 8px 14px;
       border-radius: 12px;
+      transition: background-color 0.3s, border-color 0.3s;
     }
     .date-field {
       display: flex;
@@ -187,21 +276,25 @@
     .date-field input[type="date"] {
       margin-bottom: 0;
       padding: 6px 10px;
-      background-color: #0b0f19;
+      background-color: var(--input-date-bg);
       border: 1px solid var(--card-border);
       border-radius: 8px;
-      color: #fff;
+      color: var(--text-main);
       font-size: 0.88em;
       font-family: 'JetBrains Mono', monospace;
     }
-    .date-field input[type="date"]::-webkit-calendar-picker-indicator {
+    html[data-theme="dark"] .date-field input[type="date"]::-webkit-calendar-picker-indicator {
       filter: invert(0.8);
+      cursor: pointer;
+    }
+    html[data-theme="light"] .date-field input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.2);
       cursor: pointer;
     }
     .btn-reset-dates {
       margin-bottom: 0;
       padding: 7px 12px;
-      background-color: rgba(148, 163, 184, 0.1);
+      background-color: var(--badge-default-bg);
       border: 1px solid var(--card-border);
       color: var(--text-muted);
       border-radius: 8px;
@@ -211,8 +304,8 @@
       white-space: nowrap;
     }
     .btn-reset-dates:hover {
-      background-color: rgba(148, 163, 184, 0.2);
-      color: #fff;
+      background-color: var(--card-border-hover);
+      color: var(--text-main);
     }
 
     .stats { 
@@ -223,6 +316,7 @@
       align-items: center;
       gap: 8px;
     }
+    .stats strong { color: var(--text-main); }
 
     /* Карточка таблицы с жесткой сеткой */
     .table-container {
@@ -230,7 +324,8 @@
       border: 1px solid var(--card-border);
       border-radius: 16px;
       overflow-x: auto;
-      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+      transition: background-color 0.3s, border-color 0.3s;
     }
     
     table { 
@@ -241,8 +336,8 @@
     }
 
     th {
-      background-color: #0d1322 !important;
-      color: #94a3b8 !important;
+      background-color: var(--table-th-bg) !important;
+      color: var(--table-th-color) !important;
       font-size: 0.8em !important;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -258,35 +353,33 @@
       transition: color 0.2s, background-color 0.2s;
     }
     th.sortable:hover {
-      background-color: #151d30 !important;
       color: var(--accent-color) !important;
     }
     .sort-icon {
       font-size: 0.85em;
       margin-left: 2px;
-      color: #475569;
+      color: var(--text-subtle);
       display: inline-block;
     }
     .sort-active { color: var(--accent-color); font-weight: bold; }
 
     td {
       padding: 14px 12px !important;
-      border-bottom: 1px solid #1a2333 !important;
+      border-bottom: 1px solid var(--table-td-border) !important;
       vertical-align: middle !important;
       font-size: 0.9em;
       overflow-wrap: break-word;
-      word-wrap: break-word;
       word-break: break-word;
-      hyphens: auto;
+      color: var(--text-main);
     }
     tbody tr { transition: background-color 0.15s; }
-    tbody tr:hover { background-color: rgba(30, 41, 59, 0.5); }
+    tbody tr:hover { background-color: var(--table-tr-hover); }
     tbody tr:last-child td { border-bottom: none !important; }
 
     /* Нумерация тендеров */
     .num-cell {
       font-family: 'JetBrains Mono', monospace;
-      color: #64748b;
+      color: var(--text-subtle);
       font-weight: 600;
       white-space: nowrap;
     }
@@ -295,7 +388,7 @@
     .badge-category {
       display: inline-block;
       background-color: rgba(56, 189, 248, 0.1);
-      color: #38bdf8;
+      color: var(--accent-color);
       border: 1px solid rgba(56, 189, 248, 0.25);
       padding: 2px 8px;
       border-radius: 6px;
@@ -320,12 +413,22 @@
     }
 
     /* Цветовая палитра типов процедур */
-    .section-proc-1 { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-    .section-proc-2 { background: rgba(168, 85, 247, 0.12); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
-    .section-proc-3 { background: rgba(34, 197, 94, 0.12); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
-    .section-proc-4 { background: rgba(251, 146, 60, 0.12); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
-    .section-proc-5 { background: rgba(244, 63, 94, 0.12); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
-    .section-proc-default { background: rgba(148, 163, 184, 0.1); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.2); }
+    .section-proc-1 { background: rgba(56, 189, 248, 0.12); color: #0284c7; border: 1px solid rgba(56, 189, 248, 0.3); }
+    html[data-theme="dark"] .section-proc-1 { color: #38bdf8; }
+    
+    .section-proc-2 { background: rgba(168, 85, 247, 0.12); color: #7e22ce; border: 1px solid rgba(168, 85, 247, 0.3); }
+    html[data-theme="dark"] .section-proc-2 { color: #c084fc; }
+
+    .section-proc-3 { background: rgba(34, 197, 94, 0.12); color: #15803d; border: 1px solid rgba(34, 197, 94, 0.3); }
+    html[data-theme="dark"] .section-proc-3 { color: #4ade80; }
+
+    .section-proc-4 { background: rgba(251, 146, 60, 0.12); color: #c2410c; border: 1px solid rgba(251, 146, 60, 0.3); }
+    html[data-theme="dark"] .section-proc-4 { color: #fb923c; }
+
+    .section-proc-5 { background: rgba(244, 63, 94, 0.12); color: #be123c; border: 1px solid rgba(244, 63, 94, 0.3); }
+    html[data-theme="dark"] .section-proc-5 { color: #fb7185; }
+
+    .section-proc-default { background: var(--badge-default-bg); color: var(--badge-default-color); border: 1px solid var(--badge-default-border); }
 
     /* Компактная кнопка-иконка ссылки */
     .icon-link-btn {
@@ -340,46 +443,66 @@
       border-radius: 10px;
       transition: all 0.2s;
       text-decoration: none;
-      font-size: 1.05em;
     }
+    .icon-link-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .icon-link-btn:hover {
-      background-color: rgba(56, 189, 248, 0.25);
+      background-color: var(--accent-color);
       color: #fff;
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
     .date-cell {
       font-family: 'JetBrains Mono', monospace;
-      color: #cbd5e1;
+      color: var(--text-main);
       font-size: 0.85em;
       line-height: 1.4;
       white-space: normal;
     }
     .date-time {
-      color: #94a3b8;
+      color: var(--text-muted);
       font-size: 0.85em;
       display: block;
     }
 
-    .tender-title-cell { line-height: 1.5; color: #f1f5f9; font-weight: 500; }
+    .tender-title-cell { line-height: 1.5; color: var(--text-main); font-weight: 500; }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <div>
-        <div class="header-title">
-          <span class="status-dot"></span>
-          <h2>Мониторинг Госзакупок Армении</h2>
+      <div class="header-left">
+        <span class="status-dot"></span>
+        <div>
+          <div class="header-title">
+            <h2>Мониторинг Госзакупок Армении</h2>
+          </div>
+          <p class="header-subtitle">Автоматизированная система парсинга портала gnumner.minfin.am</p>
         </div>
-        <p class="header-subtitle">Автоматизированная система парсинга портала gnumner.minfin.am</p>
       </div>
-      <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">🔄 Обновить базу</button>
+      
+      <div class="header-actions">
+        <!-- Кнопка переключения темы -->
+        <button class="btn-icon" id="themeToggleBtn" onclick="toggleTheme()" title="Переключить тему">
+          <!-- Иконка солнца (для темной темы) -->
+          <svg id="sunIcon" style="display: none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <!-- Иконка луны (для светлой темы) -->
+          <svg id="moonIcon" style="display: block;" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+
+        <!-- Кнопка обновления -->
+        <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">
+          <svg id="updateIcon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          <span>Обновить базу</span>
+        </button>
+      </div>
     </header>
 
     <details class="log-accordion" open>
-      <summary>📟 Лог сканирования системы <span id="logTime">(загрузка...)</span></summary>
+      <summary>
+        <svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        Лог сканирования системы <span id="logTime">(загрузка...)</span>
+      </summary>
       <pre class="terminal-box" id="terminalLogs">Загрузка логов последнего сканирования...</pre>
     </details>
 
@@ -388,7 +511,7 @@
         <!-- Поиск -->
         <div class="search-box">
           <div class="search-wrapper">
-            <span class="search-icon">🔍</span>
+            <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input type="search" id="searchInput" placeholder="Поиск по названию, процедуре, коду категории [XXXX]..." oninput="filterTable()">
           </div>
         </div>
@@ -423,7 +546,7 @@
           </tr>
         </thead>
         <tbody id="tableBody">
-          <tr><td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">Загрузка базы данных...</td></tr>
+          <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">Загрузка базы данных...</td></tr>
         </tbody>
       </table>
     </div>
@@ -439,6 +562,35 @@
 
     let currentSortField = 'date';
     let currentSortOrder = 'desc';
+
+    // Управление темами
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeIcons(savedTheme);
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeIcons(newTheme);
+    }
+
+    function updateThemeIcons(theme) {
+      const sunIcon = document.getElementById('sunIcon');
+      const moonIcon = document.getElementById('moonIcon');
+      if (theme === 'dark') {
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+      } else {
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+      }
+    }
+
+    initTheme();
 
     async function loadData() {
       try {
@@ -473,7 +625,6 @@
       }
     }
 
-    // Парсер дат с поддержкой времени ("24.08.2026 14:30")
     function parseDateStr(str) {
       if (!str || str === '—') return new Date(0);
       
@@ -557,16 +708,15 @@
       if (!text) return 'section-proc-default';
       const t = text.toLowerCase();
       
-      if (t.includes('բաց') || t.includes('открыт')) return 'section-proc-1';        // Голубой
-      if (t.includes('գնանշմ') || t.includes('котиров')) return 'section-proc-2';    // Фиолетовый
-      if (t.includes('մեկ անձ') || t.includes('единств')) return 'section-proc-3';  // Зеленый
-      if (t.includes('աճուրդ') || t.includes('аукцион')) return 'section-proc-4';    // Оранжевый
-      if (t.includes('փակ') || t.includes('закрыт')) return 'section-proc-5';        // Розовый
+      if (t.includes('բաց') || t.includes('открыт')) return 'section-proc-1';        
+      if (t.includes('գնանշմ') || t.includes('котиров')) return 'section-proc-2';    
+      if (t.includes('մեկ անձ') || t.includes('единств')) return 'section-proc-3';  
+      if (t.includes('աճուրդ') || t.includes('аукцион')) return 'section-proc-4';    
+      if (t.includes('փակ') || t.includes('закрыт')) return 'section-proc-5';        
       
       return 'section-proc-default';
     }
 
-    // Форматирование даты и времени в 2 строки
     function formatCellDate(str) {
       if (!str || str === '—') return '—';
       const parts = str.trim().split(' ');
@@ -578,10 +728,10 @@
 
     function renderTable(data) {
       const tbody = document.getElementById('tableBody');
-      document.getElementById('statsCounter').innerHTML = `📊 Отображено тендеров: <strong>${data.length}</strong> (из ${allTenders.length} в базе)`;
+      document.getElementById('statsCounter').innerHTML = `Отображено тендеров: <strong>${data.length}</strong> (из ${allTenders.length} в базе)`;
 
       if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">Ничего не найдено по вашему запросу.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">Ничего не найдено по вашему запросу.</td></tr>';
         return;
       }
 
@@ -605,7 +755,7 @@
             <td class="date-cell">${pubDateFormatted}</td>
             <td class="date-cell">${endDateFormatted}</td>
             <td class="tender-title-cell">${categoryBadge}${item.title}</td>
-            <td style="text-align: center;"><a href="${item.url}" class="icon-link-btn" target="_blank" rel="noopener" title="Открыть тендер">🔗</a></td>
+            <td style="text-align: center;"><a href="${item.url}" class="icon-link-btn" target="_blank" rel="noopener" title="Открыть тендер"><svg viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></a></td>
           </tr>
         `;
       }).join('');
@@ -652,6 +802,7 @@
 
     async function triggerWorkflow() {
       const btn = document.getElementById('updateBtn');
+      const icon = document.getElementById('updateIcon');
 
       let token = localStorage.getItem('gh_token');
       if (!token) {
@@ -661,7 +812,8 @@
       }
 
       btn.disabled = true;
-      btn.innerText = '⏳ Запуск парсера...';
+      icon.classList.add('spinning');
+      btn.querySelector('span').innerText = 'Запуск парсера...';
       document.getElementById('terminalLogs').innerText = '🚀 Запуск GitHub Actions workflow...\nОжидание выполнения задачи на сервере...';
 
       try {
@@ -676,21 +828,24 @@
         });
 
         if (response.ok) {
-          btn.innerText = '⚙️ Сканирование сайта...';
+          btn.querySelector('span').innerText = 'Сканирование сайта...';
           setTimeout(() => {
-            btn.innerText = '🔄 Обновить базу';
+            btn.querySelector('span').innerText = 'Обновить базу';
+            icon.classList.remove('spinning');
             btn.disabled = false;
             loadData();
           }, 25000);
         } else {
           localStorage.removeItem('gh_token');
           alert('Ошибка доступа! Проверьте токен.');
-          btn.innerText = '🔄 Обновить базу';
+          btn.querySelector('span').innerText = 'Обновить базу';
+          icon.classList.remove('spinning');
           btn.disabled = false;
         }
       } catch (err) {
         alert('Сбой сети при подключении к GitHub API.');
-        btn.innerText = '🔄 Обновить базу';
+        btn.querySelector('span').innerText = 'Обновить базу';
+        icon.classList.remove('spinning');
         btn.disabled = false;
       }
     }
