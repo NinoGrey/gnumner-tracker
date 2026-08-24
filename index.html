@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Мониторинг Госзакупок Армении (gnumner.minfin.am)</title>
 
-  <!-- Подключение шрифта Inter и стилей Pico -->
+  <!-- Подключение шрифтов и Pico CSS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -20,6 +20,10 @@
       --accent-glow: rgba(56, 189, 248, 0.15);
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
     }
 
     body { 
@@ -47,7 +51,7 @@
     }
 
     .header-title { display: flex; align-items: center; gap: 12px; }
-    .header-title h2 { margin: 0; font-weight: 700; font-size: 1.5em; letter-spacing: -0.02em; }
+    .header-title h2 { margin: 0; font-weight: 700; font-size: 1.5em; letter-spacing: -0.02em; color: #fff; }
     .header-subtitle { margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.88em; }
 
     .status-dot {
@@ -119,8 +123,6 @@
       overflow-y: auto;
       white-space: pre-wrap;
     }
-    .terminal-box::-webkit-scrollbar { width: 6px; }
-    .terminal-box::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 3px; }
 
     /* Поиск, фильтры и статистика */
     .toolbar {
@@ -222,30 +224,33 @@
       gap: 8px;
     }
 
-    /* Карточка таблицы */
+    /* Карточка таблицы с жесткой сеткой */
     .table-container {
       background-color: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 16px;
-      overflow: hidden;
+      overflow-x: auto;
       box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
     }
+    
     table { 
-      margin-bottom: 0; 
-      width: 100%; 
-      border-collapse: collapse; 
-      table-layout: fixed;
+      margin-bottom: 0 !important; 
+      width: 100% !important; 
+      border-collapse: collapse !important; 
+      table-layout: fixed !important;
     }
 
     th {
-      background-color: #0d1322;
-      color: #94a3b8;
-      font-size: 0.82em;
+      background-color: #0d1322 !important;
+      color: #94a3b8 !important;
+      font-size: 0.8em !important;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--card-border);
+      letter-spacing: 0.04em;
+      padding: 14px 12px !important;
+      border-bottom: 1px solid var(--card-border) !important;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     th.sortable {
       cursor: pointer;
@@ -253,27 +258,38 @@
       transition: color 0.2s, background-color 0.2s;
     }
     th.sortable:hover {
-      background-color: #151d30;
-      color: var(--accent-color);
+      background-color: #151d30 !important;
+      color: var(--accent-color) !important;
     }
     .sort-icon {
       font-size: 0.85em;
-      margin-left: 4px;
+      margin-left: 2px;
       color: #475569;
       display: inline-block;
     }
     .sort-active { color: var(--accent-color); font-weight: bold; }
 
     td {
-      padding: 14px 16px;
-      border-bottom: 1px solid #1a2333;
-      vertical-align: middle;
-      font-size: 0.92em;
+      padding: 14px 12px !important;
+      border-bottom: 1px solid #1a2333 !important;
+      vertical-align: middle !important;
+      font-size: 0.9em;
+      overflow-wrap: break-word;
       word-wrap: break-word;
+      word-break: break-word;
+      hyphens: auto;
     }
     tbody tr { transition: background-color 0.15s; }
     tbody tr:hover { background-color: rgba(30, 41, 59, 0.5); }
-    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:last-child td { border-bottom: none !important; }
+
+    /* Нумерация тендеров */
+    .num-cell {
+      font-family: 'JetBrains Mono', monospace;
+      color: #64748b;
+      font-weight: 600;
+      white-space: nowrap;
+    }
 
     /* Бейджи категорий */
     .badge-category {
@@ -286,13 +302,14 @@
       font-size: 0.78em;
       font-weight: 600;
       margin-right: 8px;
+      margin-bottom: 4px;
       font-family: 'JetBrains Mono', monospace;
     }
 
     /* Базовый стиль бейджа процедуры */
     .badge-section {
       display: inline-block;
-      padding: 4px 10px;
+      padding: 5px 10px;
       border-radius: 8px;
       font-size: 0.8em;
       font-weight: 600;
@@ -302,7 +319,7 @@
       max-width: 100%;
     }
 
-    /* Динамические цвета типов процедур */
+    /* Цветовая палитра типов процедур */
     .section-proc-1 { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
     .section-proc-2 { background: rgba(168, 85, 247, 0.12); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
     .section-proc-3 { background: rgba(34, 197, 94, 0.12); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
@@ -313,15 +330,18 @@
     .link-btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 4px;
       color: var(--accent-color);
       text-decoration: none;
       font-weight: 600;
-      font-size: 0.88em;
+      font-size: 0.85em;
       padding: 6px 12px;
       background-color: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
       border-radius: 8px;
       transition: all 0.2s;
+      white-space: nowrap;
     }
     .link-btn:hover {
       background-color: rgba(56, 189, 248, 0.2);
@@ -332,7 +352,14 @@
     .date-cell {
       font-family: 'JetBrains Mono', monospace;
       color: #cbd5e1;
-      font-size: 0.88em;
+      font-size: 0.85em;
+      line-height: 1.4;
+      white-space: normal;
+    }
+    .date-time {
+      color: #94a3b8;
+      font-size: 0.85em;
+      display: block;
     }
 
     .tender-title-cell { line-height: 1.5; color: #f1f5f9; font-weight: 500; }
@@ -384,15 +411,15 @@
     </div>
 
     <div class="table-container">
-      <table role="grid">
+      <table>
         <thead>
           <tr>
-            <th class="sortable" onclick="handleSort('num')" style="width: 4%;">№ <span id="sort-num" class="sort-icon">↕</span></th>
-            <th class="sortable" style="width: 18%;" onclick="handleSort('section')">Тип процедуры <span id="sort-section" class="sort-icon">↕</span></th>
-            <th class="sortable" style="width: 10%;" onclick="handleSort('date')">Публикация <span id="sort-date" class="sort-icon">↕</span></th>
-            <th class="sortable" style="width: 10%;" onclick="handleSort('end_date')">Завершение <span id="sort-end_date" class="sort-icon">↕</span></th>
-            <th class="sortable" style="width: 48%;" onclick="handleSort('title')">Наименование тендера <span id="sort-title" class="sort-icon">↕</span></th>
-            <th style="width: 10%; text-align: center;">Ссылка</th>
+            <th class="sortable" onclick="handleSort('num')" style="width: 5%;">№ <span id="sort-num" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="handleSort('section')" style="width: 17%;">Тип процедуры <span id="sort-section" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="handleSort('date')" style="width: 13%;">Публикация <span id="sort-date" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="handleSort('end_date')" style="width: 13%;">Завершение <span id="sort-end_date" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="handleSort('title')" style="width: 43%;">Наименование тендера <span id="sort-title" class="sort-icon">↕</span></th>
+            <th style="width: 9%; text-align: center;">Ссылка</th>
           </tr>
         </thead>
         <tbody id="tableBody">
@@ -446,18 +473,38 @@
       }
     }
 
+    // Парсер дат с поддержкой времени ("24.08.2026 14:30" / "24.08.2026 14:30:45")
     function parseDateStr(str) {
       if (!str || str === '—') return new Date(0);
-      const parts = str.split('.');
-      if (parts.length === 3) {
-        return new Date(parts[2], parts[1] - 1, parts[0]);
+      
+      const parts = str.trim().split(' ');
+      const dateParts = parts[0].split('.');
+      
+      if (dateParts.length !== 3) return new Date(0);
+
+      const day = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1;
+      const year = parseInt(dateParts[2], 10);
+
+      let hours = 0, minutes = 0, seconds = 0;
+
+      if (parts[1]) {
+        const timeParts = parts[1].split(':');
+        if (timeParts.length >= 2) {
+          hours = parseInt(timeParts[0], 10);
+          minutes = parseInt(timeParts[1], 10);
+        }
+        if (timeParts.length === 3) {
+          seconds = parseInt(timeParts[2], 10);
+        }
       }
-      return new Date(0);
+
+      return new Date(year, month, day, hours, minutes, seconds);
     }
 
     function formatDateToISO(str) {
       if (!str || str === '—') return '';
-      const parts = str.trim().split('.');
+      const parts = str.trim().split(' ')[0].split('.');
       if (parts.length === 3) {
         return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
       }
@@ -506,7 +553,6 @@
       renderTable(displayedTenders);
     }
 
-    // Автоматический выбор цвета бейджа
     function getSectionClass(text) {
       if (!text) return 'section-proc-default';
       const t = text.toLowerCase();
@@ -518,6 +564,16 @@
       if (t.includes('փակ') || t.includes('закрыт')) return 'section-proc-5';        // Розовый
       
       return 'section-proc-default';
+    }
+
+    // Красивое форматирование даты и времени в 2 строки
+    function formatCellDate(str) {
+      if (!str || str === '—') return '—';
+      const parts = str.trim().split(' ');
+      if (parts.length > 1) {
+        return `${parts[0]} <span class="date-time">${parts.slice(1).join(' ')}</span>`;
+      }
+      return parts[0];
     }
 
     function renderTable(data) {
@@ -539,15 +595,15 @@
           ? `<span class="badge-section ${sectionClass}">${item.section}</span>`
           : '—';
 
-        const pubDate = item.date || '—';
-        const endDate = item.end_date || '—';
+        const pubDateFormatted = formatCellDate(item.date);
+        const endDateFormatted = formatCellDate(item.end_date);
 
         return `
           <tr>
-            <td><strong style="color: #64748b;">${item.num}</strong></td>
+            <td class="num-cell">${item.num}</td>
             <td>${sectionBadge}</td>
-            <td class="date-cell">${pubDate}</td>
-            <td class="date-cell">${endDate}</td>
+            <td class="date-cell">${pubDateFormatted}</td>
+            <td class="date-cell">${endDateFormatted}</td>
             <td class="tender-title-cell">${categoryBadge}${item.title}</td>
             <td style="text-align: center;"><a href="${item.url}" class="link-btn" target="_blank" rel="noopener">Открыть 🔗</a></td>
           </tr>
