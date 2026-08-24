@@ -146,7 +146,7 @@ def load_existing_data() -> tuple[list, set]:
     return [], set()
 
 
-def parse_section(session: requests.Session, section: dict, existing_urls: set, new_tenders: list):
+def parse_section(section, existing_urls, new_tenders, session):
     section_name = section["name"]
     start_url = section["url"]
 
@@ -176,6 +176,7 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
             break
 
         added_on_page = 0
+        skipped_duplicates = 0
 
         for block in tender_blocks:
             link_elem = block.find('a', href=True)
@@ -189,12 +190,11 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
             if not title or len(title) < 3:
                 continue
 
-            # РАННЯЯ ОСТАНОВКА: Встречен уже сохраненный в базе тендер
+            # ИЗМЕНЕНИЕ: Если тендер уже есть в базе, не останавливаем весь парсинг,
+            # а просто пропускаем его и идем к следующему на этой странице
             if full_url in existing_urls:
-                log_msg("⏹ ОСТАНОВКА РАЗДЕЛА: Достигнуты ранее спарсенные тендеры.")
-                log_msg(f"    └ Известный URL: {full_url}")
-                stop_parsing = True
-                break
+                skipped_duplicates += 1
+                continue
 
             pub_date_dt, pub_date_str, end_date_str = extract_dates(block)
 
@@ -222,12 +222,15 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
             added_on_page += 1
             added_in_section += 1
 
-        log_msg(f"    ├ Добавлено новых со страницы: {added_on_page}")
+        log_msg(f"    ├ Добавлено новых со страницы: {added_on_page} (пропущено дубликатов: {skipped_duplicates})")
         log_msg(f"    └ Всего новых в этой сессии: {len(new_tenders)}")
 
-        if stop_parsing or added_on_page == 0:
+        if stop_parsing:
             break
 
+        # Если на странице вообще не было блоков или все элементы оказались старыми / дубликатами,
+        # но при этом дошли до конца страницы — пробуем следующую страницу, 
+        # однако если страница пустая по добавлении, можно тоже выйти.
         page += 1
         time.sleep(DELAY_BETWEEN_PAGES)
 
