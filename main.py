@@ -1,123 +1,182 @@
-import json
-import os
-import datetime
-import requests
-from bs4 import BeautifulSoup
-
-# Словарь с понятными названиями для ваших 9 категорий
-CATEGORIES = {
-    "https://gnumner.minfin.am/hy/page/elektronayin_achurdi_haytararutyun_ev_hraver/": "Электронный аукцион",
-    "https://gnumner.minfin.am/hy/page/bac_mrcuyti_haytararutyun_ev_hraver/": "Открытый конкурс",
-    "https://gnumner.minfin.am/hy/page/bac_mrcuyti_nakhaorakavorman_haytararutyun/": "Предквалификация",
-    # Добавьте оставшиеся ссылки и их названия по аналогии:
-    # "URL": "Название категории",
-}
-
-DATA_FILE = "data.json"
-
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return []
-    return []
-
-def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-def extract_tenders_from_page(url, headers):
-    try:
-        res = requests.get(url, headers=headers, timeout=15)
-        if res.status_code != 200:
-            return []
-        
-        soup = BeautifulSoup(res.text, "html.parser")
-        tender_blocks = soup.find_all("div", class_="tender")
-        page_tenders = []
-
-        for block in tender_blocks:
-            a_tag = block.find("a", href=True)
-            if not a_tag:
-                continue
-
-            href = a_tag["href"]
-            title = a_tag.get_text(strip=True)
-
-            if href and title:
-                full_url = href if href.startswith("http") else f"https://gnumner.minfin.am{href}"
-                page_tenders.append({"title": title, "url": full_url})
-                
-        return page_tenders
-    except Exception as e:
-        print(f"Ошибка загрузки {url}: {e}")
-        return []
-
-def run_tracker():
-    tenders = load_data()
-    seen_urls = {item["url"] for item in tenders}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мониторинг Госзакупок Армении (gnumner.minfin.am)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <style>
+    body { padding: 20px; background-color: #0f172a; color: #f1f5f9; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { margin-bottom: 25px; border-bottom: 1px solid #334155; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+    header h2 { margin-bottom: 0; }
+    .search-box { margin-bottom: 15px; }
+    .search-box input { width: 100%; font-size: 1.1em; padding: 12px; }
+    table a { color: #38bdf8; text-decoration: none; font-weight: bold; }
+    table a:hover { text-decoration: underline; }
+    .stats { color: #94a3b8; font-size: 0.9em; margin-bottom: 15px; }
     
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    .badge-category {
+      display: inline-block;
+      background-color: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #0284c7;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75em;
+      font-weight: 600;
+      margin-right: 8px;
+      white-space: nowrap;
+      vertical-align: middle;
     }
-    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    new_tenders_batch = []
+    .tender-title-cell { line-height: 1.5; }
+    
+    .btn-update {
+      width: auto;
+      margin-bottom: 0;
+      background-color: #0284c7;
+      border-color: #0284c7;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-update:disabled { opacity: 0.6; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h2>🏛️ Мониторинг Госзакупок Армении</h2>
+        <p><small>База всех объявлений с gnumner.minfin.am</small></p>
+      </div>
+      <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">🔄 Обновить базу</button>
+    </header>
 
-    for base_url, category_name in CATEGORIES.items():
-        last_known_url = None
-        for item in tenders:
-            if item.get("source_page") == base_url:
-                last_known_url = item["url"]
-                break
+    <div class="search-box">
+      <input type="search" id="searchInput" placeholder="Введите название тендера, категорию или номер..." onkeyup="filterTable()">
+    </div>
 
-        first_page_tenders = extract_tenders_from_page(base_url, headers)
-        if not first_page_tenders:
-            continue
+    <div class="stats" id="statsCounter">Загрузка данных...</div>
 
-        latest_site_url = first_page_tenders[0]["url"]
-        if last_known_url and latest_site_url == last_known_url:
-            print(f"Категория [{category_name}] актуальна.")
-            continue
+    <figure>
+      <table role="grid">
+        <thead>
+          <tr>
+            <th style="width: 15%;">Дата добавления</th>
+            <th>Наименование тендера / процедуры</th>
+            <th style="width: 15%;">Документы</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="3">Загрузка базы данных...</td></tr>
+        </tbody>
+      </table>
+    </figure>
+  </div>
 
-        print(f"Обнаружены обновления в [{category_name}]! Начинаем сбор...")
+  <script>
+    const GH_USER = 'NinoGrey';
+    const GH_REPO = 'gnumner-tracker';
+    const WORKFLOW_ID = 'tracker.yml';
 
-        category_new_tenders = []
-        stop_parsing = False
+    let allTenders = [];
 
-        for page_num in range(1, 10):
-            if stop_parsing:
-                break
-                
-            page_url = f"{base_url}?page={page_num}" if page_num > 1 else base_url
-            page_tenders = extract_tenders_from_page(page_url, headers) if page_num > 1 else first_page_tenders
+    async function loadData() {
+      try {
+        const res = await fetch('data.json?v=' + new Date().getTime());
+        allTenders = await res.json();
+        renderTable(allTenders);
+      } catch (err) {
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="3">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
+      }
+    }
 
-            if not page_tenders:
-                break
+    function renderTable(data) {
+      const tbody = document.getElementById('tableBody');
+      document.getElementById('statsCounter').innerText = `Найдено тендеров: ${data.length} (из ${allTenders.length} всего)`;
 
-            for t in page_tenders:
-                if t["url"] == last_known_url or t["url"] in seen_urls:
-                    stop_parsing = True
-                    break
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3">Ничего не найдено по вашему запросу.</td></tr>';
+        return;
+      }
 
-                category_new_tenders.append({
-                    "title": t["title"],
-                    "url": t["url"],
-                    "date": now_str,
-                    "category": category_name, # Сохраняем имя категории
-                    "source_page": base_url
-                })
-                seen_urls.add(t["url"])
+      tbody.innerHTML = data.map(item => {
+        const categoryBadge = item.category 
+          ? `<span class="badge-category">${item.category}</span>`
+          : '';
 
-        new_tenders_batch.extend(category_new_tenders)
+        return `
+          <tr>
+            <td><small>${item.date}</small></td>
+            <td class="tender-title-cell">${categoryBadge}${item.title}</td>
+            <td><a href="${item.url}" target="_blank" rel="noopener">Открыть 🔗</a></td>
+          </tr>
+        `;
+      }).join('');
+    }
 
-    if new_tenders_batch:
-        tenders = new_tenders_batch + tenders
-        save_data(tenders)
-        print(f"Успешно добавлено новых тендеров: {len(new_tenders_batch)}")
-    else:
-        print("Вся база находится в актуальном состоянии.")
+    function filterTable() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      if (!query) {
+        renderTable(allTenders);
+        return;
+      }
+      const filtered = allTenders.filter(item => {
+        const titleMatch = item.title && item.title.toLowerCase().includes(query);
+        const categoryMatch = item.category && item.category.toLowerCase().includes(query);
+        return titleMatch || categoryMatch;
+      });
+      renderTable(filtered);
+    }
 
-if __name__ == "__main__":
-    run_tracker()
+    async function triggerWorkflow() {
+      const btn = document.getElementById('updateBtn');
+      
+      // 1. Проверяем токен в памяти браузера или запрашиваем через input (prompt)
+      let token = localStorage.getItem('gh_token');
+      if (!token) {
+        token = prompt('Введите ваш GitHub Personal Access Token (начинается на ghp_):');
+        if (!token) return; // Если нажали Отмена
+        localStorage.setItem('gh_token', token.trim());
+      }
+
+      btn.disabled = true;
+      btn.innerText = '⏳ Запуск парсера...';
+
+      try {
+        const response = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/actions/workflows/${WORKFLOW_ID}/dispatches`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/vnd.github+json',
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ ref: 'main' })
+        });
+
+        if (response.ok) {
+          btn.innerText = '⚙️ Сканирование сайта...';
+          // Ждём 25 секунд завершения GitHub Action и обновляем данные в таблице
+          setTimeout(() => {
+            btn.innerText = '🔄 Обновить базу';
+            btn.disabled = false;
+            loadData();
+          }, 25000);
+        } else {
+          // Если токен оказался неверным — сбрасываем его из сохранённых
+          localStorage.removeItem('gh_token');
+          alert('Ошибка доступа! Проверьте правильность токена и попробуйте снова.');
+          btn.innerText = '🔄 Обновить базу';
+          btn.disabled = false;
+        }
+      } catch (err) {
+        alert('Сбой сети при подключении к GitHub API.');
+        btn.innerText = '🔄 Обновить базу';
+        btn.disabled = false;
+      }
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
