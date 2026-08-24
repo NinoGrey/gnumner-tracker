@@ -64,7 +64,7 @@
     </header>
 
     <div class="search-box">
-      <input type="search" id="searchInput" placeholder="Введите название, категорию, номер или дату (например: հագուստ, Аукцион, 24.08)..." onkeyup="filterTable()">
+      <input type="search" id="searchInput" placeholder="Введите название, категорию, № или дату (например: հագուստ, Аукцион, 105, 24.08)..." onkeyup="filterTable()">
     </div>
 
     <div class="stats" id="statsCounter">Загрузка данных...</div>
@@ -73,13 +73,15 @@
       <table role="grid">
         <thead>
           <tr>
-            <th style="width: 18%;">Дата публикации</th>
+            <th style="width: 6%;">№</th>
+            <th style="width: 14%;">Дата публикации</th>
+            <th style="width: 14%;">Дата завершения</th>
             <th>Наименование тендера / процедуры</th>
-            <th style="width: 15%;">Документы</th>
+            <th style="width: 12%;">Документы</th>
           </tr>
         </thead>
         <tbody id="tableBody">
-          <tr><td colspan="3">Загрузка базы данных...</td></tr>
+          <tr><td colspan="5">Загрузка базы данных...</td></tr>
         </tbody>
       </table>
     </figure>
@@ -95,10 +97,20 @@
     async function loadData() {
       try {
         const res = await fetch('data.json?v=' + new Date().getTime());
-        allTenders = await res.json();
+        const rawData = await res.json();
+        
+        // Обратная нумерация: самый старый тендер (в конце массива) получает № 1,
+        // самый свежий (в начале массива) — максимальный № N. 
+        // При добавлении новых свежих тендеров номера старых тендеров не смещаются.
+        const total = rawData.length;
+        allTenders = rawData.map((item, index) => ({
+          ...item,
+          num: total - index
+        }));
+
         renderTable(allTenders);
       } catch (err) {
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="3">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="5">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
         document.getElementById('statsCounter').innerText = 'Найдено тендеров: 0';
       }
     }
@@ -108,7 +120,7 @@
       document.getElementById('statsCounter').innerText = `Отображено тендеров: ${data.length} (из ${allTenders.length} всего)`;
 
       if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3">Ничего не найдено по вашему запросу.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5">Ничего не найдено по вашему запросу.</td></tr>';
         return;
       }
 
@@ -117,9 +129,14 @@
           ? `<span class="badge-category">${item.category}</span>`
           : '';
 
+        const pubDate = item.date || '—';
+        const endDate = item.end_date || item.deadline || '—';
+
         return `
           <tr>
-            <td><small>${item.date || '—'}</small></td>
+            <td><strong>${item.num}</strong></td>
+            <td><small>${pubDate}</small></td>
+            <td><small>${endDate}</small></td>
             <td class="tender-title-cell">${categoryBadge}${item.title}</td>
             <td><a href="${item.url}" target="_blank" rel="noopener">Открыть 🔗</a></td>
           </tr>
@@ -139,7 +156,10 @@
         const titleMatch = item.title && item.title.toLowerCase().includes(query);
         const categoryMatch = item.category && item.category.toLowerCase().includes(query);
         const dateMatch = item.date && item.date.toLowerCase().includes(query);
-        return titleMatch || categoryMatch || dateMatch;
+        const endDateMatch = (item.end_date || item.deadline) && (item.end_date || item.deadline).toLowerCase().includes(query);
+        const numMatch = item.num && item.num.toString() === query;
+
+        return titleMatch || categoryMatch || dateMatch || endDateMatch || numMatch;
       });
 
       renderTable(filtered);
