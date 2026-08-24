@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
   <style>
     body { padding: 20px; background-color: #0f172a; color: #f1f5f9; }
-    .container { max-width: 1200px; margin: 0 auto; }
+    .container { max-width: 1400px; margin: 0 auto; }
     
     header { 
       margin-bottom: 20px; 
@@ -23,8 +23,28 @@
     
     .search-box { margin-bottom: 15px; }
     .search-box input { width: 100%; font-size: 1.1em; padding: 12px; }
+    
     table a { color: #38bdf8; text-decoration: none; font-weight: bold; }
     table a:hover { text-decoration: underline; }
+    
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s;
+    }
+    th.sortable:hover {
+      background-color: #1e293b;
+      color: #38bdf8;
+    }
+    .sort-icon {
+      font-size: 0.8em;
+      margin-left: 4px;
+      color: #64748b;
+    }
+    .sort-active {
+      color: #38bdf8;
+    }
+
     .stats { color: #94a3b8; font-size: 0.9em; margin-bottom: 15px; }
     
     .badge-category {
@@ -40,6 +60,17 @@
       white-space: nowrap;
       vertical-align: middle;
     }
+
+    .badge-section {
+      display: inline-block;
+      background-color: #0f172a;
+      color: #cbd5e1;
+      border: 1px solid #475569;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.8em;
+    }
+    
     .tender-title-cell { line-height: 1.5; }
     
     .btn-update {
@@ -52,7 +83,6 @@
     }
     .btn-update:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    /* Оформление терминала логов */
     details.log-accordion {
       background-color: #020617;
       border: 1px solid #1e293b;
@@ -80,7 +110,7 @@
       font-family: 'Courier New', Courier, monospace;
       font-size: 0.82em;
       line-height: 1.4;
-      max-height: 250px;
+      max-height: 220px;
       overflow-y: auto;
       white-space: pre-wrap;
       border-top: 1px solid #1e293b;
@@ -92,19 +122,18 @@
     <header>
       <div>
         <h2>🏛️ Мониторинг Госзакупок Армении</h2>
-        <p><small>База всех объявлений с gnumner.minfin.am</small></p>
+        <p><small>База объявлений с gnumner.minfin.am</small></p>
       </div>
       <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">🔄 Обновить базу</button>
     </header>
 
-    <!-- Вывод красивого лога сбора -->
     <details class="log-accordion" open>
       <summary>📟 Лог сканирования сайта <span id="logTime">(загрузка...)</span></summary>
       <pre class="terminal-box" id="terminalLogs">Загрузка логов последнего сканирования...</pre>
     </details>
 
     <div class="search-box">
-      <input type="search" id="searchInput" placeholder="Введите название, категорию, № или дату..." onkeyup="filterTable()">
+      <input type="search" id="searchInput" placeholder="Введите название, тип процедуры, код [категорию] или дату..." onkeyup="filterTable()">
     </div>
 
     <div class="stats" id="statsCounter">Загрузка данных...</div>
@@ -113,15 +142,16 @@
       <table role="grid">
         <thead>
           <tr>
-            <th style="width: 6%;">№</th>
-            <th style="width: 14%;">Дата публикации</th>
-            <th style="width: 14%;">Дата завершения</th>
-            <th>Наименование тендера / процедуры</th>
-            <th style="width: 12%;">Документы</th>
+            <th class="sortable" onclick="handleSort('num')" style="width: 5%;">№ <span id="sort-num" class="sort-icon">↕</span></th>
+            <th class="sortable" style="width: 18%;" onclick="handleSort('section')">Тип процедуры <span id="sort-section" class="sort-icon">↕</span></th>
+            <th class="sortable" style="width: 12%;" onclick="handleSort('date')">Публикация <span id="sort-date" class="sort-icon">↕</span></th>
+            <th class="sortable" style="width: 12%;" onclick="handleSort('end_date')">Завершение <span id="sort-end_date" class="sort-icon">↕</span></th>
+            <th class="sortable" onclick="handleSort('title')">Наименование тендера <span id="sort-title" class="sort-icon">↕</span></th>
+            <th style="width: 10%;">Ссылка</th>
           </tr>
         </thead>
         <tbody id="tableBody">
-          <tr><td colspan="5">Загрузка базы данных...</td></tr>
+          <tr><td colspan="6">Загрузка базы данных...</td></tr>
         </tbody>
       </table>
     </figure>
@@ -133,9 +163,13 @@
     const WORKFLOW_ID = 'tracker.yml';
 
     let allTenders = [];
+    let displayedTenders = [];
+    
+    // Состояние сортировки
+    let currentSortField = 'date';
+    let currentSortOrder = 'desc';
 
     async function loadData() {
-      // 1. Загрузка данных тендеров
       try {
         const res = await fetch('data.json?v=' + new Date().getTime());
         const rawData = await res.json();
@@ -146,13 +180,12 @@
           num: total - index
         }));
 
-        renderTable(allTenders);
+        filterTable();
       } catch (err) {
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="5">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="6">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
         document.getElementById('statsCounter').innerText = 'Найдено тендеров: 0';
       }
 
-      // 2. Загрузка логов
       loadLogs();
     }
 
@@ -169,12 +202,64 @@
       }
     }
 
+    function parseDateStr(str) {
+      if (!str || str === '—') return new Date(0);
+      const parts = str.split('.');
+      if (parts.length === 3) {
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      }
+      return new Date(0);
+    }
+
+    function handleSort(field) {
+      if (currentSortField === field) {
+        currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortField = field;
+        currentSortOrder = 'asc';
+      }
+      applySortAndRender();
+    }
+
+    function applySortAndRender() {
+      // Обновление иконок сортировки в заголовке
+      ['num', 'section', 'date', 'end_date', 'title'].forEach(f => {
+        const icon = document.getElementById(`sort-${f}`);
+        if (f === currentSortField) {
+          icon.innerText = currentSortOrder === 'asc' ? '▲' : '▼';
+          icon.className = 'sort-icon sort-active';
+        } else {
+          icon.innerText = '↕';
+          icon.className = 'sort-icon';
+        }
+      });
+
+      displayedTenders.sort((a, b) => {
+        let valA = a[currentSortField] || '';
+        let valB = b[currentSortField] || '';
+
+        let result = 0;
+
+        if (currentSortField === 'num') {
+          result = a.num - b.num;
+        } else if (currentSortField === 'date' || currentSortField === 'end_date') {
+          result = parseDateStr(valA) - parseDateStr(valB);
+        } else {
+          result = valA.toString().localeCompare(valB.toString(), 'ru');
+        }
+
+        return currentSortOrder === 'asc' ? result : -result;
+      });
+
+      renderTable(displayedTenders);
+    }
+
     function renderTable(data) {
       const tbody = document.getElementById('tableBody');
       document.getElementById('statsCounter').innerText = `Отображено тендеров: ${data.length} (из ${allTenders.length} всего)`;
 
       if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5">Ничего не найдено по вашему запросу.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6">Ничего не найдено по вашему запросу.</td></tr>';
         return;
       }
 
@@ -183,12 +268,17 @@
           ? `<span class="badge-category">${item.category}</span>`
           : '';
 
+        const sectionBadge = item.section 
+          ? `<span class="badge-section">${item.section}</span>`
+          : '—';
+
         const pubDate = item.date || '—';
         const endDate = item.end_date || '—';
 
         return `
           <tr>
             <td><strong>${item.num}</strong></td>
+            <td>${sectionBadge}</td>
             <td><small>${pubDate}</small></td>
             <td><small>${endDate}</small></td>
             <td class="tender-title-cell">${categoryBadge}${item.title}</td>
@@ -202,21 +292,21 @@
       const query = document.getElementById('searchInput').value.toLowerCase().trim();
       
       if (!query) {
-        renderTable(allTenders);
-        return;
+        displayedTenders = [...allTenders];
+      } else {
+        displayedTenders = allTenders.filter(item => {
+          const titleMatch = item.title && item.title.toLowerCase().includes(query);
+          const categoryMatch = item.category && item.category.toLowerCase().includes(query);
+          const sectionMatch = item.section && item.section.toLowerCase().includes(query);
+          const dateMatch = item.date && item.date.toLowerCase().includes(query);
+          const endDateMatch = item.end_date && item.end_date.toLowerCase().includes(query);
+          const numMatch = item.num && item.num.toString() === query;
+
+          return titleMatch || categoryMatch || sectionMatch || dateMatch || endDateMatch || numMatch;
+        });
       }
 
-      const filtered = allTenders.filter(item => {
-        const titleMatch = item.title && item.title.toLowerCase().includes(query);
-        const categoryMatch = item.category && item.category.toLowerCase().includes(query);
-        const dateMatch = item.date && item.date.toLowerCase().includes(query);
-        const endDateMatch = item.end_date && item.end_date.toLowerCase().includes(query);
-        const numMatch = item.num && item.num.toString() === query;
-
-        return titleMatch || categoryMatch || dateMatch || endDateMatch || numMatch;
-      });
-
-      renderTable(filtered);
+      applySortAndRender();
     }
 
     async function triggerWorkflow() {
