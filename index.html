@@ -275,7 +275,7 @@
     tbody tr:hover { background-color: rgba(30, 41, 59, 0.5); }
     tbody tr:last-child td { border-bottom: none; }
 
-    /* Бейджи */
+    /* Бейджи категорий */
     .badge-category {
       display: inline-block;
       background-color: rgba(56, 189, 248, 0.1);
@@ -289,20 +289,26 @@
       font-family: 'JetBrains Mono', monospace;
     }
 
+    /* Базовый стиль бейджа процедуры */
     .badge-section {
       display: inline-block;
-      background-color: rgba(148, 163, 184, 0.08);
-      color: #cbd5e1;
-      border: 1px solid rgba(148, 163, 184, 0.2);
       padding: 4px 10px;
       border-radius: 8px;
       font-size: 0.8em;
-      font-weight: 500;
+      font-weight: 600;
       line-height: 1.35;
       white-space: normal;
       word-break: break-word;
       max-width: 100%;
     }
+
+    /* Динамические цвета типов процедур */
+    .section-proc-1 { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .section-proc-2 { background: rgba(168, 85, 247, 0.12); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    .section-proc-3 { background: rgba(34, 197, 94, 0.12); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .section-proc-4 { background: rgba(251, 146, 60, 0.12); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
+    .section-proc-5 { background: rgba(244, 63, 94, 0.12); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+    .section-proc-default { background: rgba(148, 163, 184, 0.1); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.2); }
 
     .link-btn {
       display: inline-flex;
@@ -404,7 +410,6 @@
     let allTenders = [];
     let displayedTenders = [];
 
-    // Состояние сортировки
     let currentSortField = 'date';
     let currentSortOrder = 'desc';
 
@@ -450,7 +455,6 @@
       return new Date(0);
     }
 
-    // Преобразование формата "24.08.2026" -> "2026-08-24" для сравнения с <input type="date">
     function formatDateToISO(str) {
       if (!str || str === '—') return '';
       const parts = str.trim().split('.');
@@ -471,7 +475,6 @@
     }
 
     function applySortAndRender() {
-      // Обновление иконок сортировки в заголовке
       ['num', 'section', 'date', 'end_date', 'title'].forEach(f => {
         const icon = document.getElementById(`sort-${f}`);
         if (f === currentSortField) {
@@ -503,6 +506,20 @@
       renderTable(displayedTenders);
     }
 
+    // Автоматический выбор цвета бейджа
+    function getSectionClass(text) {
+      if (!text) return 'section-proc-default';
+      const t = text.toLowerCase();
+      
+      if (t.includes('բաց') || t.includes('открыт')) return 'section-proc-1';        // Голубой
+      if (t.includes('գնանշմ') || t.includes('котиров')) return 'section-proc-2';    // Фиолетовый
+      if (t.includes('մեկ անձ') || t.includes('единств')) return 'section-proc-3';  // Зеленый
+      if (t.includes('աճուրդ') || t.includes('аукцион')) return 'section-proc-4';    // Оранжевый
+      if (t.includes('փակ') || t.includes('закрыт')) return 'section-proc-5';        // Розовый
+      
+      return 'section-proc-default';
+    }
+
     function renderTable(data) {
       const tbody = document.getElementById('tableBody');
       document.getElementById('statsCounter').innerHTML = `📊 Отображено тендеров: <strong>${data.length}</strong> (из ${allTenders.length} в базе)`;
@@ -517,8 +534,9 @@
           ? `<span class="badge-category">${item.category}</span>`
           : '';
 
+        const sectionClass = getSectionClass(item.section);
         const sectionBadge = item.section 
-          ? `<span class="badge-section">${item.section}</span>`
+          ? `<span class="badge-section ${sectionClass}">${item.section}</span>`
           : '—';
 
         const pubDate = item.date || '—';
@@ -539,11 +557,10 @@
 
     function filterTable() {
       const query = document.getElementById('searchInput').value.toLowerCase().trim();
-      const dateFrom = document.getElementById('dateFrom').value; // 'YYYY-MM-DD'
-      const dateTo = document.getElementById('dateTo').value;     // 'YYYY-MM-DD'
+      const dateFrom = document.getElementById('dateFrom').value;
+      const dateTo = document.getElementById('dateTo').value;
 
       displayedTenders = allTenders.filter(item => {
-        // 1. Поисковый текстовый запрос
         const titleMatch = item.title && item.title.toLowerCase().includes(query);
         const categoryMatch = item.category && item.category.toLowerCase().includes(query);
         const sectionMatch = item.section && item.section.toLowerCase().includes(query);
@@ -553,7 +570,6 @@
 
         const matchesText = !query || (titleMatch || categoryMatch || sectionMatch || dateMatch || endDateMatch || numMatch);
 
-        // 2. Фильтрация по дате публикации (item.date)
         const itemDateISO = formatDateToISO(item.date);
         let matchesDateFrom = true;
         let matchesDateTo = true;
