@@ -1,15 +1,15 @@
 import json
 import re
-import requests
 import urllib3
 from datetime import datetime
+import requests
 from bs4 import BeautifulSoup
 
 # Отключаем предупреждения о необрабатываемых SSL-сертификатах
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://gnumner.minfin.am"
-TARGET_URL = f"{BASE_URL}/hy/page/elektronayin_achurdi_haytararutyun_ev_hraver/"
+TARGET_URL = f"{BASE_URL}/hy/page/elektronayin_achurdi_haytararutyun_ev_hraver"
 
 HEADERS = {
     "User-Agent": (
@@ -18,9 +18,9 @@ HEADERS = {
     )
 }
 
-# --- НАСТРОЙКА ДИАПАЗОНА ДАТ (Формат: ГГГГ-ММ-ДД) ---
-START_DATE = datetime.strptime("2026-08-01", "%Y-%m-%d")
-END_DATE = datetime.strptime("2026-08-31", "%Y-%m-%d")
+# --- НИЖНЯЯ ГРАНИЦА ДАТЫ (Скрипт парсит от самых свежих тендеров ДО этой даты включительно) ---
+CUTOFF_DATE = datetime.strptime("2026-08-01", "%Y-%m-%d")
+MAX_PAGES = 50  # Защитное ограничение количества пролистываемых страниц
 
 
 def clean_text(text: str) -> str:
@@ -31,7 +31,7 @@ def clean_text(text: str) -> str:
 
 
 def parse_date_from_text(text: str) -> datetime | None:
-    """Извлекает первую дату публикации (DD.MM.YYYY) из текста и возвращает объект datetime."""
+    """Извлекает дату публикации (DD.MM.YYYY) из текста и возвращает объект datetime."""
     match = re.search(r'\b(\d{2}\.\d{2}\.\d{4})\b', text)
     if match:
         try:
@@ -46,9 +46,8 @@ def parse_tenders():
     page = 1
     stop_parsing = False
 
-    while not stop_parsing:
-        # Формируем URL с пагинацией: ?page=1, ?page=2 и т.д.
-        url = f"{TARGET_URL}?page={page}" if page > 1 else TARGET_URL
+    while not stop_parsing and page <= MAX_PAGES:
+        url = f"{TARGET_URL}/{page}"
         print(f"📡 Обработка страницы {page}: {url}")
 
         try:
@@ -62,7 +61,6 @@ def parse_tenders():
         soup = BeautifulSoup(response.text, 'html.parser')
         tender_blocks = soup.find_all('div', class_='tender')
 
-        # Если на странице нет тендеров — дошли до конца пагинации
         if not tender_blocks:
             print("🏁 Достигнут конец страниц (нет больше тендеров).")
             break
@@ -74,30 +72,27 @@ def parse_tenders():
             if not link_elem:
                 continue
 
-            full_url = link_elem['href'].strip()
-            title = clean_text(link_elem.get_text())
+            href = link_elem['href'].strip()
+            full_url = href if href.startswith('http') else f"{BASE_URL}{href}"
 
+            title = clean_text(link_elem.get_text())
             if not title:
                 continue
 
-            # Извлекаем дату публикации из блока <p class="tender_time">
+            # Извлечение даты публикации из блока <p class="tender_time">
             time_elem = block.find('p', class_='tender_time')
             raw_time_text = clean_text(time_elem.get_text()) if time_elem else ""
             pub_date = parse_date_from_text(raw_time_text)
 
-            # Проверка рамок дат
+            # Проверка нижней границы
             if pub_date:
-                # Если дата тендера старше START_DATE — прекращаем парсинг следующих страниц
-                if pub_date < START_DATE:
-                    print(f"⏹ Достигнута дата {pub_date.strftime('%d.%m.%Y')}, которая старше {START_DATE.strftime('%d.%m.%Y')}. Остановка.")
+                # Если дата тендера строго меньше CUTOFF_DATE — останавливаем парсинг
+                if pub_date < CUTOFF_DATE:
+                    print(f"⏹ Достигнута дата {pub_date.strftime('%d.%m.%Y')}, которая старше границы {CUTOFF_DATE.strftime('%d.%m.%Y')}. Остановка.")
                     stop_parsing = True
                     break
 
-                # Пропускаем тендеры, если они новее END_DATE
-                if pub_date > END_DATE:
-                    continue
-
-            # Извлечение кода/категории из скобок
+            # Извлечение кода/категории из скобок [ ... ]
             category = ""
             cat_match = re.search(r'\[(.*?)\]', title)
             if cat_match:
@@ -116,7 +111,7 @@ def parse_tenders():
                 tenders.append(tender_data)
                 tenders_on_page += 1
 
-        print(f"   └ Добавлено тендеров со страницы: {tenders_on_page}")
+        print(f"    └ Добавлено тендеров со страницы: {tenders_on_page}")
         page += 1
 
     print(f"✅ Всего собрано тендеров: {len(tenders)}")
