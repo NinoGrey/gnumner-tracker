@@ -9,7 +9,6 @@
     body { padding: 20px; background-color: #0f172a; color: #f1f5f9; }
     .container { max-width: 1200px; margin: 0 auto; }
     
-    /* Флекс-контейнер для размещения кнопки справа в шапке */
     header { 
       margin-bottom: 25px; 
       border-bottom: 1px solid #334155; 
@@ -43,7 +42,6 @@
     }
     .tender-title-cell { line-height: 1.5; }
     
-    /* Стили для кнопки обновления */
     .btn-update {
       width: auto;
       margin-bottom: 0;
@@ -62,12 +60,11 @@
         <h2>🏛️ Мониторинг Госзакупок Армении</h2>
         <p><small>База всех объявлений с gnumner.minfin.am</small></p>
       </div>
-      <!-- Кнопка обновления -->
       <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">🔄 Обновить базу</button>
     </header>
 
     <div class="search-box">
-      <input type="search" id="searchInput" placeholder="Введите название тендера, категорию или номер (например: հագուստ, կտոր, Аукцион)..." onkeyup="filterTable()">
+      <input type="search" id="searchInput" placeholder="Введите название, категорию, номер или дату (например: հագուստ, Аукцион, 24.08)..." onkeyup="filterTable()">
     </div>
 
     <div class="stats" id="statsCounter">Загрузка данных...</div>
@@ -76,7 +73,7 @@
       <table role="grid">
         <thead>
           <tr>
-            <th style="width: 15%;">Дата добавления</th>
+            <th style="width: 18%;">Дата публикации</th>
             <th>Наименование тендера / процедуры</th>
             <th style="width: 15%;">Документы</th>
           </tr>
@@ -102,12 +99,13 @@
         renderTable(allTenders);
       } catch (err) {
         document.getElementById('tableBody').innerHTML = '<tr><td colspan="3">База данных пока пуста. Нажмите «Обновить базу».</td></tr>';
+        document.getElementById('statsCounter').innerText = 'Найдено тендеров: 0';
       }
     }
 
     function renderTable(data) {
       const tbody = document.getElementById('tableBody');
-      document.getElementById('statsCounter').innerText = `Найдено тендеров: ${data.length} (из ${allTenders.length} всего)`;
+      document.getElementById('statsCounter').innerText = `Отображено тендеров: ${data.length} (из ${allTenders.length} всего)`;
 
       if (data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="3">Ничего не найдено по вашему запросу.</td></tr>';
@@ -121,7 +119,7 @@
 
         return `
           <tr>
-            <td><small>${item.date}</small></td>
+            <td><small>${item.date || '—'}</small></td>
             <td class="tender-title-cell">${categoryBadge}${item.title}</td>
             <td><a href="${item.url}" target="_blank" rel="noopener">Открыть 🔗</a></td>
           </tr>
@@ -140,7 +138,8 @@
       const filtered = allTenders.filter(item => {
         const titleMatch = item.title && item.title.toLowerCase().includes(query);
         const categoryMatch = item.category && item.category.toLowerCase().includes(query);
-        return titleMatch || categoryMatch;
+        const dateMatch = item.date && item.date.toLowerCase().includes(query);
+        return titleMatch || categoryMatch || dateMatch;
       });
 
       renderTable(filtered);
@@ -149,7 +148,6 @@
     async function triggerWorkflow() {
       const btn = document.getElementById('updateBtn');
       
-      // Запрашиваем токен через инпут или берём из памяти
       let token = localStorage.getItem('gh_token');
       if (!token) {
         token = prompt('Введите ваш GitHub Personal Access Token (ghp_...):');
@@ -180,7 +178,7 @@
           }, 25000);
         } else {
           localStorage.removeItem('gh_token');
-          alert('Ошибка доступа! Проверьте токен.');
+          alert('Ошибка доступа! Проверьте правильность токена и его права (repo / workflow).');
           btn.innerText = '🔄 Обновить базу';
           btn.disabled = false;
         }
