@@ -18,7 +18,7 @@ HEADERS = {
 }
 
 def clean_text(text: str) -> str:
-    """Очищает текст от лишних пробелов, переносов строк и символов."""
+    """Очищает текст от лишних пробелов и переносов строк."""
     if not text:
         return ""
     return re.sub(r'\s+', ' ', text).strip()
@@ -33,38 +33,30 @@ def parse_tenders():
     soup = BeautifulSoup(response.text, 'html.parser')
     tenders = []
     
-    # Ищем строки таблицы (tr), где содержатся конкретные объявления
-    rows = soup.find_all('tr')
+    # Ищем все блоки карточек тендеров <div class="tender">
+    tender_blocks = soup.find_all('div', class_='tender')
     
-    for row in rows:
-        # Ищем ссылку внутри строки
-        link_elem = row.find('a', href=True)
+    for block in tender_blocks:
+        # Извлекаем ссылку и заголовок
+        link_elem = block.find('a', href=True)
         if not link_elem:
             continue
             
-        href = link_elem['href']
+        full_url = link_elem['href'].strip()
         title = clean_text(link_elem.get_text())
         
-        # Пропускаем служебные ссылки и пустые элементы
-        if not title or len(title) < 5 or 'javascript' in href:
+        if not title:
             continue
             
-        # Корректно формируем URL без потери слэша
-        if href.startswith('http'):
-            full_url = href
-        else:
-            full_url = f"{BASE_URL}/{href.lstrip('/')}"
-            
-        # Извлекаем дату из текста всей строки таблицы (формат ДД.ММ.ГГГГ)
-        row_text = clean_text(row.get_text())
-        date_match = re.search(r'\b\d{2}\.\d{2}\.\d{4}\b', row_text)
-        date_text = date_match.group(0) if date_match else ""
+        # Извлекаем блок с датой <p class="tender_time">
+        time_elem = block.find('p', class_='tender_time')
+        date_text = clean_text(time_elem.get_text()) if time_elem else ""
         
-        # Выделяем код тендера/категорию из скобок (например, [ՀՀ ՖՆ-ԷԱՃԱՊՁԲ-24/1])
+        # Извлекаем категорию/код, если они есть в скобках [ ... ]
         category = ""
         cat_match = re.search(r'\[(.*?)\]', title)
         if cat_match:
-            category = cat_match.group(1)
+            category = cat_match.group(1).strip()
             title = title.replace(f"[{category}]", "").strip()
 
         tender_data = {
