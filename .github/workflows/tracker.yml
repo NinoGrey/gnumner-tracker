@@ -2,9 +2,8 @@ name: Gnumner All Tenders Collector
 
 on:
   schedule:
-    # Запуск каждые 30 минут по будням
     - cron: '*/30 4-15 * * 1-5'
-  workflow_dispatch: # Возможность запустить вручную одной кнопкой
+  workflow_dispatch:
 
 jobs:
   run-tracker:
@@ -13,6 +12,8 @@ jobs:
     steps:
       - name: Клонирование репозитория
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Настройка Python
         uses: actions/setup-python@v5
@@ -27,10 +28,10 @@ jobs:
       - name: Сбор всех тендеров
         run: python main.py
 
-      - name: Сохранение обновленной базы в репозиторий
+      - name: Сохранение обновленной базы
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action Bot"
-          git add data.json
-          git diff-index --quiet HEAD || git commit -m "Update all tenders list"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data.json || true
+          git commit -m "Update all tenders list" || exit 0
           git push
