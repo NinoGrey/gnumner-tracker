@@ -17,9 +17,9 @@ HEADERS = {
     )
 }
 
-# Ниже этой даты парсер не идет (включительно)
+# Граница отсечки по дате (включительно)
 CUTOFF_DATE = datetime.strptime("2026-08-01", "%Y-%m-%d")
-MAX_PAGES = 100  # Страховочный лимит страниц
+MAX_PAGES = 100
 
 
 def clean_text(text: str) -> str:
@@ -28,49 +28,43 @@ def clean_text(text: str) -> str:
     return re.sub(r'\s+', ' ', text).strip()
 
 
-def parse_date_from_text(text: str) -> datetime | None:
-    """Ищет первую дату DD.MM.YYYY в тексте блока времени."""
-    match = re.search(r'\b(\d{2}\.\d{2}\.\d{4})\b', text)
-    if match:
+def extract_dates(block) -> tuple[datetime | None, str, str]:
+    """
+    Извлекает все даты (DD.MM.YYYY) из текста блока тендера.
+    Возвращает: (pub_date_datetime, pub_date_str, end_date_str)
+    """
+    text = block.get_text()
+    dates = re.findall(r'\b(\d{2}\.\d{2}\.\d{4})\b', text)
+    
+    pub_dt = None
+    pub_str = "—"
+    end_str = "—"
+
+    if len(dates) >= 1:
+        pub_str = dates[0]
         try:
-            return datetime.strptime(match.group(1), "%d.%m.%Y")
+            pub_dt = datetime.strptime(pub_str, "%d.%m.%Y")
         except ValueError:
-            return None
-    return None
+            pub_dt = None
 
+    if len(dates) >= 2:
+        end_str = dates[1]
 
-def get_next_page_url(soup: BeautifulSoup, current_page: int) -> str | None:
-    """Находит реальную ссылку на следующую страницу в блоке пагинации сайта."""
-    pagination = soup.find('div', class_='pagination')
-    if not pagination:
-        pagination = soup.find('ul', class_='pager')
-
-    if pagination:
-        # Ищем активную страницу или ссылку со следующим номером
-        next_link = pagination.find('a', href=True, text=re.compile(str(current_page + 1)))
-        if not next_link:
-            # Запасной вариант: ищем стрелку '>', 'next' или 'հաջորդ'
-            next_link = pagination.find('a', href=True, text=re.compile(r'(>|next|հաջորդ)', re.I))
-
-        if next_link and next_link.get('href'):
-            href = next_link['href'].strip()
-            return href if href.startswith('http') else f"{BASE_URL}{href}"
-
-    # Резервный формат GET-параметра, если кнопка не найдена в DOM
-    return f"{START_URL}?page={current_page}"
+    return pub_dt, pub_str, end_str
 
 
 def parse_tenders():
     tenders = []
-    current_url = START_URL
     page = 1
     stop_parsing = False
 
-    while current_url and not stop_parsing and page <= MAX_PAGES:
-        print(f"\n📡 [Страница {page}] Загрузка: {current_url}")
+    while not stop_parsing and page <= MAX_PAGES:
+        # Надежная пагинация через параметр ?page=N
+        url = f"{START_URL}?page={page}" if page > 1 else START_URL
+        print(f"\n📡 [Страница {page}] Загрузка: {url}")
 
         try:
-            response = requests.get(current_url, headers=HEADERS, timeout=15, verify=False)
+            response = requests.get(url, headers=HEADERS, timeout=15, verify=False)
             response.raise_for_status()
             response.encoding = 'utf-8'
         except Exception as e:
@@ -98,16 +92,12 @@ def parse_tenders():
             if not title:
                 continue
 
-            # Дата публикации
-            time_elem = block.find('p', class_='tender_time')
-            raw_time_text = clean_text(time_elem.get_text()) if time_elem else ""
-            pub_date = parse_date_from_text(raw_time_text)
+            # Извлечение даты публикации и даты завершения
+            pub_date_dt, pub_date_str, end_date_str = extract_dates(block)
 
-            date_str = pub_date.strftime("%d.%m.%Y") if pub_date else "Не указана"
-
-            # Проверка отсечки по дате
-            if pub_date and pub_date < CUTOFF_DATE:
-                print(f"⏹ ОСТАНОВКА: Найдена дата {date_str} (раньше {CUTOFF_DATE.strftime('%d.%m.%Y')}).")
+            # Проверка отсечки по дате публикации
+            if pub_date_dt and pub_date_dt < CUTOFF_DATE:
+                print(f"⏹ ОСТАНОВКА: Найдена дата {pub_date_str} (раньше {CUTOFF_DATE.strftime('%d.%m.%Y')}).")
                 print(f"   └ Тендер: \"{title[:60]}...\"")
                 stop_parsing = True
                 break
@@ -122,8 +112,8 @@ def parse_tenders():
             tender_data = {
                 "title": title,
                 "category": category,
-                "date": date_str,
-                "raw_date_info": raw_time_text,
+                "date": pub_date_str,
+                "end_date": end_date_str,
                 "url": full_url
             }
 
@@ -137,13 +127,6 @@ def parse_tenders():
         if stop_parsing:
             break
 
-        # Переход к следующей странице
-        next_url = get_next_page_url(soup, page)
-        if next_url == current_url:
-            print("🏁 Следующая страница совпадает с текущей. Завершение.")
-            break
-
-        current_url = next_url
         page += 1
 
     print(f"\n✅ Успешно собрано {len(tenders)} тендеров с {page} страниц.")
