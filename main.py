@@ -10,7 +10,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://gnumner.minfin.am"
 
-# Список всех нужных разделов сайта
 SECTIONS = [
     {
         "name": "Электронный аукцион (Էլեկտրոնային աճուրդ)",
@@ -30,7 +29,6 @@ HEADERS = {
     "Accept-Language": "hy,en-US;q=0.9,en;q=0.8,ru;q=0.7",
 }
 
-# Отсечка: сканировать только тендеры начиная с 1 августа 2026 года
 CUTOFF_DATE = datetime.strptime("2026-08-01", "%Y-%m-%d")
 MAX_PAGES_PER_SECTION = 50
 DELAY_BETWEEN_PAGES = 2.0
@@ -50,11 +48,9 @@ def clean_text(text: str) -> str:
 
 
 def extract_dates(block) -> tuple[datetime | None, str, str]:
-    """Извлекает даты из параграфа <p class="tender_time"> (формат YYYY-MM-DD HH:MM:SS)."""
     time_elem = block.find('p', class_='tender_time')
     text = time_elem.get_text() if time_elem else block.get_text()
 
-    # Поиск дат формата YYYY-MM-DD
     raw_dates = re.findall(r'\b(\d{4}-\d{2}-\d{2})\b', text)
 
     pub_dt = None
@@ -115,13 +111,12 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Точный поиск контейнеров <div class="tender">
         tender_blocks = soup.find_all('div', class_='tender')
         if not tender_blocks:
             tender_blocks = soup.find_all('tr', class_=re.compile(r'(even|odd)'))
 
         if not tender_blocks:
-            log_msg("🏁 Блоки тендеров не найдены. Конец текущего раздела.")
+            log_msg("🏁 Блоки тендеров не найдены. Конец раздела.")
             break
 
         added_on_page = 0
@@ -140,7 +135,6 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
 
             pub_date_dt, pub_date_str, end_date_str = extract_dates(block)
 
-            # Проверка отсечки по дате
             if pub_date_dt and pub_date_dt < CUTOFF_DATE:
                 log_msg(f"⏹ ОСТАНОВКА РАЗДЕЛА: Найдена дата {pub_date_str} (раньше {CUTOFF_DATE.strftime('%d.%m.%Y')}).")
                 log_msg(f"   └ Тендер: \"{title[:60]}...\"")
@@ -158,6 +152,7 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
                 tenders_list.append({
                     "title": title,
                     "category": category,
+                    "section": section_name,
                     "date": pub_date_str,
                     "end_date": end_date_str,
                     "url": full_url
@@ -177,6 +172,14 @@ def parse_section(session: requests.Session, section: dict, existing_urls: set, 
     log_msg(f"✅ Раздел «{section_name}» обработан. Добавлено: {added_in_section} тендеров.")
 
 
+def parse_date_for_sort(item):
+    """Преобразует строку даты DD.MM.YYYY в объект datetime для сортировки."""
+    try:
+        return datetime.strptime(item["date"], "%d.%m.%Y")
+    except Exception:
+        return datetime.min
+
+
 def main():
     try:
         session = requests.Session()
@@ -187,6 +190,10 @@ def main():
 
         for section in SECTIONS:
             parse_section(session, section, existing_urls, tenders)
+
+        # Сортировка по дате публикации (от свежих к старым)
+        tenders.sort(key=parse_date_for_sort, reverse=True)
+        log_msg("📊 Все собранные тендеры отсортированы по дате публикации (по убыванию).")
 
         with open('data.json', 'w', encoding='utf-8') as f:
             json.dump(tenders, f, ensure_ascii=False, indent=2)
