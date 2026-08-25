@@ -11,6 +11,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://gnumner.minfin.am"
 
+requests.get("https://gnumner.minfin.am", verify=True)
+
 SECTIONS = [
     {
         "name": "Էլեկտրոնային աճուրդ",
