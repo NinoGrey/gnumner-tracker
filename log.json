@@ -1,5 +1,5 @@
 {
-  "timestamp": "26.08.2026 06:39:49",
+  "timestamp": "26.08.2026 06:47:15",
   "total_tenders": 591,
   "logs": [
     "🚀 Старт полного обновления базы. Отсечка по дате: 01.08.2026",
@@ -119,6 +119,7 @@
     "📡 [Стр. 26] Загрузка: https://gnumner.minfin.am/hy/page/gnanshman_harcman_haytararutyun_ev_hraver/26",
     "    └ Добавлено со страницы: 10",
     "📡 [Стр. 27] Загрузка: https://gnumner.minfin.am/hy/page/gnanshman_harcman_haytararutyun_ev_hraver/27",
+    "⚠️ [Попытка 1/3] Сбой запроса: 500 Server Error: Internal Server Error for url: https://gnumner.minfin.am/hy/page/gnanshman_harcman_haytararutyun_ev_hraver/27",
     "    └ Добавлено со страницы: 10",
     "📡 [Стр. 28] Загрузка: https://gnumner.minfin.am/hy/page/gnanshman_harcman_haytararutyun_ev_hraver/28",
     "    └ Добавлено со страницы: 10",
