@@ -114,7 +114,6 @@
       gap: 12px;
     }
 
-    /* Исправление кнопки переключения темы */
     .btn-icon {
       all: unset;
       box-sizing: border-box;
@@ -402,7 +401,6 @@
     tbody tr:hover { background-color: var(--table-tr-hover); }
     tbody tr:last-child td { border-bottom: none !important; }
 
-    /* Нумерация тендеров */
     .num-cell {
       font-family: 'Inter', monospace;
       color: var(--text-subtle);
@@ -410,7 +408,6 @@
       white-space: nowrap;
     }
 
-    /* Бейджи категорий */
     .badge-category {
       display: inline-block;
       background-color: rgba(56, 189, 248, 0.1);
@@ -425,7 +422,6 @@
       font-family: 'Inter', monospace;
     }
 
-    /* Базовый стиль бейджа процедуры */
     .badge-section {
       display: inline-block;
       padding: 5px 10px;
@@ -438,7 +434,6 @@
       max-width: 100%;
     }
 
-    /* Цветовая палитра типов процедур */
     .section-proc-1 {
       background: rgba(59, 130, 246, 0.13);
       color: #2563eb;
@@ -508,7 +503,6 @@
       border: 1px solid var(--badge-default-border);
     }
 
-    /* Компактная кнопка-иконка ссылки */
     .icon-link-btn {
       display: inline-flex;
       align-items: center;
@@ -560,15 +554,11 @@
       </div>
       
       <div class="header-actions">
-        <!-- Кнопка переключения темы -->
         <button class="btn-icon" id="themeToggleBtn" onclick="toggleTheme()" title="Переключить тему">
-          <!-- Иконка солнца (для темной темы) -->
           <svg id="sunIcon" style="display: none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-          <!-- Иконка луны (для светлой темы) -->
           <svg id="moonIcon" style="display: block;" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
         </button>
 
-        <!-- Кнопка обновления -->
         <button class="btn-update" id="updateBtn" onclick="triggerWorkflow()">
           <svg id="updateIcon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
           <span>Обновить базу</span>
@@ -586,7 +576,6 @@
 
     <div class="toolbar">
       <div class="filters-row">
-        <!-- Поиск -->
         <div class="search-box">
           <div class="search-wrapper">
             <svg class="search-icon-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -594,7 +583,6 @@
           </div>
         </div>
 
-        <!-- Фильтр по диапазону дат -->
         <div class="date-filter-group">
           <div class="date-field">
             <label for="dateFrom">С:</label>
@@ -634,6 +622,7 @@
     const GH_USER = 'NinoGrey';
     const GH_REPO = 'gnumner-tracker';
     const WORKFLOW_ID = 'tracker.yml';
+    const RAW_BASE_URL = `https://raw.githubusercontent.com/${GH_USER}/${GH_REPO}/main`;
 
     let allTenders = [];
     let displayedTenders = [];
@@ -672,10 +661,13 @@
 
     async function loadData() {
       try {
-        const res = await fetch('data.json?v=' + new Date().getTime());
+        const cacheBuster = new Date().getTime();
+        const res = await fetch(`${RAW_BASE_URL}/data.json?t=${cacheBuster}`);
+        if (!res.ok) throw new Error('Ошибка загрузки data.json');
+        
         const rawData = await res.json();
-
         const total = rawData.length;
+        
         allTenders = rawData.map((item, index) => ({
           ...item,
           num: total - index
@@ -687,16 +679,19 @@
         document.getElementById('statsCounter').innerText = 'Найдено тендеров: 0';
       }
 
-      loadLogs();
+      await loadLogs();
     }
 
     async function loadLogs() {
       try {
-        const res = await fetch('log.json?v=' + new Date().getTime());
+        const cacheBuster = new Date().getTime();
+        const res = await fetch(`${RAW_BASE_URL}/log.json?t=${cacheBuster}`);
+        if (!res.ok) throw new Error('Ошибка загрузки log.json');
+        
         const logData = await res.json();
 
         document.getElementById('logTime').innerText = `[Обновлено: ${logData.timestamp || '—'}]`;
-        document.getElementById('terminalLogs').innerText = logData.logs.join('\n');
+        document.getElementById('terminalLogs').innerText = Array.isArray(logData.logs) ? logData.logs.join('\n') : (logData.logs || '');
       } catch (err) {
         document.getElementById('logTime').innerText = '';
         document.getElementById('terminalLogs').innerText = 'Лог последнего сканирования недоступен.';
@@ -878,6 +873,14 @@
       filterTable();
     }
 
+    function resetUpdateBtn() {
+      const btn = document.getElementById('updateBtn');
+      const icon = document.getElementById('updateIcon');
+      btn.disabled = false;
+      icon.classList.remove('spinning');
+      btn.querySelector('span').innerText = 'Обновить базу';
+    }
+
     // Запуск сборщика с полным отслеживанием статуса выполнения через API
     async function triggerWorkflow() {
       const btn = document.getElementById('updateBtn');
@@ -912,9 +915,9 @@
         }
 
         btn.querySelector('span').innerText = 'В очереди...';
-        document.getElementById('terminalLogs').innerText += '⏳ Задача поставлена в очередь. Ожидаем старт на сервере...\n';
+        document.getElementById('terminalLogs').innerText += '⏳ Задача поставлена в очередь. Ожидаем запуск на сервере...\n';
 
-        setTimeout(() => checkWorkflowStatus(token), 6000);
+        setTimeout(() => checkWorkflowStatus(token), 4000);
 
       } catch (err) {
         alert(err.message || 'Сбой сети при подключении к GitHub API.');
@@ -932,46 +935,39 @@
         const data = await res.json();
 
         if (!data.workflow_runs || data.workflow_runs.length === 0) {
-          setTimeout(() => checkWorkflowStatus(token), 10000);
+          setTimeout(() => checkWorkflowStatus(token), 5000);
           return;
         }
 
         const latestRun = data.workflow_runs[0];
 
-        if (latestRun.status === 'completed') {
+        if (latestRun.status === 'queued') {
+          btn.querySelector('span').innerText = 'В очереди...';
+          setTimeout(() => checkWorkflowStatus(token), 4000);
+        } else if (latestRun.status === 'in_progress') {
+          btn.querySelector('span').innerText = 'Парсинг...';
+          document.getElementById('terminalLogs').innerText = '⚙️ Идет сканирование портала gnumner на сервере GitHub Actions...\n';
+          setTimeout(() => checkWorkflowStatus(token), 5000);
+        } else if (latestRun.status === 'completed') {
           if (latestRun.conclusion === 'success') {
-            btn.querySelector('span').innerText = 'Публикация...';
-            document.getElementById('terminalLogs').innerText += '✅ Сканирование завершено! Ждем обновление кэша GitHub Pages (~40 сек)...\n';
+            btn.querySelector('span').innerText = 'Загрузка...';
+            document.getElementById('terminalLogs').innerText += '✅ Сканирование успешно завершено! Подтягиваем свежие данные...\n';
 
-            setTimeout(() => {
-              resetUpdateBtn();
-              loadData();
-              document.getElementById('terminalLogs').innerText += '🎉 База данных успешно обновлена на сервере!\n';
-            }, 40000);
+            // Мгновенная загрузка данных напрямую из RAW
+            await loadData();
+            resetUpdateBtn();
           } else {
-            document.getElementById('terminalLogs').innerText += `❌ Ошибка выполнения на сервере (статус: ${latestRun.conclusion}). Проверьте логи GitHub Actions.\n`;
+            document.getElementById('terminalLogs').innerText += `❌ Ошибка выполнения экшена (Статус: ${latestRun.conclusion}).\n`;
             resetUpdateBtn();
           }
-        } else {
-          btn.querySelector('span').innerText = 'Парсинг идет...';
-          document.getElementById('terminalLogs').innerText = `⏳ Выполняется сбор тендеров на сервере GitHub...\nПроцесс займет пару минут. Не закрывайте страницу.\n`;
-
-          setTimeout(() => checkWorkflowStatus(token), 15000);
         }
       } catch (err) {
-        document.getElementById('terminalLogs').innerText += '⚠️ Сбой при проверке статуса процесса. Попробуйте обновить страницу позже.\n';
-        resetUpdateBtn();
+        console.error('Ошибка проверки статуса workflow:', err);
+        setTimeout(() => checkWorkflowStatus(token), 5000);
       }
     }
 
-    function resetUpdateBtn() {
-      const btn = document.getElementById('updateBtn');
-      const icon = document.getElementById('updateIcon');
-      btn.querySelector('span').innerText = 'Обновить базу';
-      icon.classList.remove('spinning');
-      btn.disabled = false;
-    }
-
+    // Инициализация загрузки при старте страницы
     loadData();
   </script>
 </body>
