@@ -33,7 +33,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: uv run python parser.py # Убедитесь, что файл называется parser.py
+        run: uv run python main.py # Убедитесь, что файл называется main.py
 
       - name: Сохранение обновленной базы и логов
         run: |
